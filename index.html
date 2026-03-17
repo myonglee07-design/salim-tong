@@ -40,7 +40,7 @@ self.addEventListener('fetch', e => {
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 :root{
   --primary:#1aab97;--primary-light:#e6f9f7;--primary-dark:#138a79;
   --red:#e63946;--orange:#ff9f1c;--yellow:#e67700;
@@ -60,6 +60,7 @@ body.theme-yellow{--primary:#f59e0b;--primary-light:#fffbeb;--primary-dark:#d977
 /* 테마: 베이비핑크 */
 body.theme-babypink{--primary:#f48fb1;--primary-light:#fff0f5;--primary-dark:#e06090;--bg:#fff5f8;--border:#fad4e5}
 html,body{height:100%;overflow:hidden}
+input, textarea, select { -webkit-user-select:text; user-select:text; }
 body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text)}
 body.fs-sm #content, body.fs-sm #bottom-nav { zoom: 0.87; }
 body.fs-md #content, body.fs-md #bottom-nav { zoom: 1; }
