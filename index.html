@@ -213,7 +213,7 @@ textarea.fi{resize:none}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 
 /* ========== DB ========== */
 let db;
@@ -309,7 +309,7 @@ function renderView(view) {
     case 'stock':          el('header-title').textContent='재고'; renderStock(); break;
     case 'stock-add':      el('header-title').textContent=p.edit?'품목 수정':'품목 추가'; renderStockAdd(p); break;
     case 'stock-detail':   el('header-title').textContent='품목 상세'; renderStockDetail(p.id||_detailId); break;
-    case 'shopping':       el('header-title').textContent='장보기'; renderShopping(); break;
+    case 'shopping':       el('header-title').textContent='장보기'; el('header-action').textContent='공유'; el('header-action').onclick=shareShoppingList; renderShopping(); break;
     case 'shopping-add':   el('header-title').textContent='품목 추가'; renderShoppingAdd(p); break;
     case 'stock-from-shopping': renderStockFromShopping(p); break;
     case 'stats':          el('header-title').textContent='소비 통계'; renderStats(); break;
@@ -376,6 +376,7 @@ async function renderHome() {
     </div>
     ${expired.length>0 ? `<div class="alert-banner ab-red" onclick="switchTab('stock')"><span class="ab-icon">⚠️</span><div class="ab-info"><div class="ab-title">유통기한 만료</div><div class="ab-sub">확인이 필요해요</div></div><span class="ab-count">${expired.length}개</span></div>` : ''}
     ${warn.length>0 ? `<div class="alert-banner ab-orange" onclick="switchTab('stock');setStockFilter('⏰임박')"><span class="ab-icon">⏰</span><div class="ab-info"><div class="ab-title">유통기한 임박 (3일 이내)</div><div class="ab-sub">빨리 드세요!</div></div><span class="ab-count">${warn.length}개</span></div>` : ''}
+    ${expired.length>0||warn.length>0 ? `<div class="alert-banner ab-green" style="cursor:pointer" onclick="switchTab('shopping');setTimeout(showAutoRecommend,200)"><span class="ab-icon">🛒</span><div class="ab-info"><div class="ab-title">장보기 추천</div><div class="ab-sub">임박·소진 품목을 확인해보세요</div></div><span class="ab-count" style="color:var(--primary)">${expired.length+warn.length}개</span></div>` : ''}
     ${expired.length===0&&warn.length===0 ? `<div class="alert-banner ab-green"><span class="ab-icon">✅</span><div class="ab-info"><div class="ab-title">유통기한 이상 없음</div><div class="ab-sub">냉장고 상태가 좋아요!</div></div></div>` : ''}
     <div class="sec-header"><span class="sec-title">재고 현황</span><span class="sec-action" onclick="switchTab('stock')">전체 →</span></div>
     <div class="stat-grid">
@@ -518,6 +519,28 @@ async function markConsumed(id) {
   await dbPut('items',it);
   showToast('소비 완료 처리되었습니다');
   renderStockDetail(id);
+  // 장보기 추가 여부 팝업
+  const overlay = document.createElement('div');
+  overlay.id = 'consumed-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `<div style="background:#fff;border-radius:20px;padding:24px 20px;margin:0 24px;width:100%;max-width:320px;text-align:center" onclick="event.stopPropagation()">
+    <div style="font-size:26px;margin-bottom:8px">🛒</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px">"${it.name}"</div>
+    <div style="font-size:14px;color:var(--sub);margin-bottom:18px">장보기 목록에 추가할까요?</div>
+    <div style="display:flex;gap:10px">
+      <button onclick="document.getElementById('consumed-overlay').remove()" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">아니요</button>
+      <button onclick="addConsumedToShop('${escQ(it.name)}')" style="flex:1;padding:12px;border-radius:12px;border:none;background:var(--primary);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">추가</button>
+    </div>
+  </div>`;
+  overlay.onclick = () => overlay.remove();
+  document.body.appendChild(overlay);
+}
+async function addConsumedToShop(name) {
+  document.getElementById('consumed-overlay')?.remove();
+  const all = await dbAll('shopping');
+  if (all.find(i=>i.name===name&&!i.checked)) { showToast('이미 장보기에 있어요'); return; }
+  await dbAdd('shopping', { name, checked:false, addedDate:todayStr() });
+  showToast(`"${name}" 장보기에 추가됐어요`);
 }
 async function deleteItem(id) {
   // confirm()은 iframe에서 막힘 → 커스텀 확인창 사용
@@ -617,6 +640,10 @@ async function renderShopping() {
       <button class="btn btn-p" onclick="quickAdd()" style="width:auto;padding:11px 18px;flex-shrink:0">추가</button>
     </div>
     <div style="padding:0 16px 8px;font-size:12px;color:var(--sub)">✅ 타이핑 후 엔터 → 바로 추가, 계속 이어서 입력 가능해요</div>
+    <div style="display:flex;gap:8px;padding:0 16px 10px">
+      <button class="btn btn-s btn-sm" onclick="showAutoRecommend()" style="flex:1;font-size:13px">🔔 보충 필요한 품목</button>
+      <button class="btn btn-s btn-sm" onclick="showFrequentItems()" style="flex:1;font-size:13px">🔄 자주 사는 것</button>
+    </div>
     ${favs.length>0 ? `<div style="display:flex;gap:7px;padding:0 16px 10px;overflow-x:auto;scrollbar-width:none">
       ${favs.map(f=>`<div class="fav-chip" onclick="quickAddFav('${escQ(f.name)}')" style="white-space:nowrap">${f.name}</div>`).join('')}
     </div>` : ''}
@@ -684,6 +711,105 @@ function shopItem(it) {
 }
 
 async function toggleCheck(id) { const it=await dbGet('shopping',id); it.checked=!it.checked; await dbPut('shopping',it); renderShopping(); }
+
+/* ── 자동 장보기 추천 ── */
+async function showAutoRecommend() {
+  const items = await dbAll('items');
+  const shopAll = await dbAll('shopping');
+  const shopNames = shopAll.map(i=>i.name);
+  const recommend = items.filter(i=>{
+    if (i.isConsumed) return false;
+    if (shopNames.includes(i.name)) return false; // 이미 장보기에 있으면 제외
+    const d = getDDay(i.expiryDate);
+    return d !== null && d <= 7; // D-7 이하
+  });
+  // 소비 완료 처리된 품목 중 장보기에 없는 것도 추가
+  const consumed = items.filter(i => i.isConsumed && !shopNames.includes(i.name));
+  const all = [...recommend, ...consumed.slice(0,5)];
+  if (all.length === 0) { showToast('보충이 필요한 품목이 없어요'); return; }
+  showPickerOverlay('🔔 보충 필요한 품목', all, '장보기에 추가');
+}
+
+/* ── 자주 사는 것 ── */
+async function showFrequentItems() {
+  const items = await dbAll('items');
+  const shopAll = await dbAll('shopping');
+  const shopNames = shopAll.map(i=>i.name);
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-30);
+  const cutStr = cutoff.toISOString().split('T')[0];
+  const countMap = {};
+  items.filter(i=>i.purchaseDate && i.purchaseDate >= cutStr).forEach(i=>{
+    countMap[i.name] = (countMap[i.name]||0) + 1;
+  });
+  const frequent = Object.entries(countMap)
+    .filter(([name, cnt]) => cnt >= 2 && !shopNames.includes(name))
+    .sort((a,b) => b[1]-a[1])
+    .slice(0,10)
+    .map(([name]) => items.find(i=>i.name===name)).filter(Boolean);
+  if (frequent.length === 0) { showToast('최근 30일 자주 구매한 품목이 없어요'); return; }
+  showPickerOverlay('🔄 자주 사는 것', frequent, '장보기에 추가');
+}
+
+/* ── 선택 팝업 공통 ── */
+function showPickerOverlay(title, items, btnLabel) {
+  const selected = new Set();
+  const overlay = document.createElement('div');
+  overlay.id = 'picker-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:flex-end;justify-content:center';
+  overlay.innerHTML = `<div style="background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:70vh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
+    <div style="font-size:17px;font-weight:700;margin-bottom:14px">${title}</div>
+    <div style="overflow-y:auto;flex:1;margin-bottom:14px">
+      ${items.map((it,i)=>`<div id="pick-${i}" onclick="togglePick(${i},this)" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;margin-bottom:6px;border:1.5px solid var(--border);background:var(--card);cursor:pointer;transition:all .15s">
+        <div style="width:22px;height:22px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0" id="pick-chk-${i}"></div>
+        <div style="flex:1"><div style="font-size:15px;font-weight:600">${it.name}</div><div style="font-size:12px;color:var(--sub)">${it.category||''}${it.expiryDate?' · '+fmtDate(it.expiryDate):''}</div></div>
+        ${itemBadge(it)}
+      </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="document.getElementById('picker-overlay').remove()" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">닫기</button>
+      <button onclick="addPickedToShop()" style="flex:2;padding:12px;border-radius:12px;border:none;background:var(--primary);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">${btnLabel}</button>
+    </div>
+  </div>`;
+  overlay.onclick = () => overlay.remove();
+  document.body.appendChild(overlay);
+  window._pickerItems = items;
+  window._pickerSelected = selected;
+}
+
+function togglePick(i, el) {
+  const sel = window._pickerSelected;
+  if (sel.has(i)) { sel.delete(i); el.style.borderColor='var(--border)'; el.style.background='var(--card)'; const c=document.getElementById('pick-chk-'+i); c.style.background=''; c.style.borderColor='var(--border)'; c.style.color=''; c.textContent=''; }
+  else { sel.add(i); el.style.borderColor='var(--primary)'; el.style.background='var(--primary-light)'; const c=document.getElementById('pick-chk-'+i); c.style.background='var(--primary)'; c.style.borderColor='var(--primary)'; c.style.color='#fff'; c.textContent='✓'; }
+}
+
+async function addPickedToShop() {
+  const sel = window._pickerSelected;
+  const items = window._pickerItems;
+  if (sel.size === 0) { showToast('품목을 선택해주세요'); return; }
+  for (const i of sel) {
+    const it = items[i];
+    await dbAdd('shopping', { name:it.name, checked:false, addedDate:todayStr() });
+  }
+  document.getElementById('picker-overlay')?.remove();
+  showToast(`${sel.size}개 추가됨`);
+  renderShopping();
+}
+
+/* ── 장보기 공유 ── */
+async function shareShoppingList() {
+  const all = await dbAll('shopping');
+  const unchecked = all.filter(i=>!i.checked);
+  if (unchecked.length === 0) { showToast('장보기 목록이 비어있어요'); return; }
+  const text = `🛒 장보기 목록\n${unchecked.map((it,i)=>`${i+1}. ${it.name}`).join('\n')}`;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('클립보드에 복사됐어요! 카톡에 붙여넣기 하세요 😊');
+  } catch {
+    // fallback
+    const ta = document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('복사됐어요! 카톡에 붙여넣기 하세요 😊');
+  }
+}
 async function clearChecked() { const all=await dbAll('shopping'); for(const it of all.filter(i=>i.checked)) await dbDel('shopping',it.id); showToast('삭제됨'); renderShopping(); }
 async function delShop(id) { await dbDel('shopping',id); renderShopping(); }
 
@@ -820,11 +946,16 @@ async function renderStats() {
   const cats = getAllCats();
   const catCnt = cats.map(ct=>({cat:ct,cnt:active.filter(i=>i.category===ct).length}));
   const maxCnt = Math.max(...catCnt.map(x=>x.cnt),1);
-  const consumedMap={}, wastedMap={};
+  const consumedMap={}, wastedMap={}, frequentMap={};
   consumed.forEach(i=>consumedMap[i.name]=(consumedMap[i.name]||0)+1);
   expired.forEach(i=>wastedMap[i.name]=(wastedMap[i.name]||0)+1);
+  // 최근 30일 자주 구매
+  const cutoff30 = new Date(); cutoff30.setDate(cutoff30.getDate()-30);
+  const cutStr30 = cutoff30.toISOString().split('T')[0];
+  all.filter(i=>i.purchaseDate&&i.purchaseDate>=cutStr30).forEach(i=>frequentMap[i.name]=(frequentMap[i.name]||0)+1);
   const topConsumed = Object.entries(consumedMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const topWasted = Object.entries(wastedMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const topFrequent = Object.entries(frequentMap).filter(([,cnt])=>cnt>=2).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const c = document.getElementById('content');
   c.innerHTML = `<div class="view">
     <div class="sec-header"><span class="sec-title">💳 카드 정산 현황</span></div>
@@ -850,6 +981,7 @@ async function renderStats() {
     <div class="card">${catCnt.map(x=>`<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span class="cat-badge ${catClass(x.cat)}">${x.cat}</span><span style="font-size:13px;font-weight:600">${x.cnt}개</span></div><div class="prog"><div class="prog-fill" style="width:${x.cnt/maxCnt*100}%;background:${catColor(x.cat)}"></div></div></div>`).join('')}</div>
     ${topConsumed.length>0 ? `<div class="sec-header"><span class="sec-title">자주 소비한 품목</span></div><div class="card">${topConsumed.map(([n,cnt],i)=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;${i<topConsumed.length-1?'border-bottom:1px solid var(--border)':''}"><span style="font-size:16px;font-weight:700;color:var(--primary);width:20px">${i+1}</span><span style="flex:1;font-size:15px">${n}</span><span style="font-size:14px;color:var(--sub)">${cnt}회</span></div>`).join('')}</div>` : ''}
     ${topWasted.length>0 ? `<div class="sec-header"><span class="sec-title">자주 버린 품목 ⚠️</span></div><div class="card">${topWasted.map(([n,cnt],i)=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;${i<topWasted.length-1?'border-bottom:1px solid var(--border)':''}"><span style="font-size:16px;font-weight:700;color:var(--red);width:20px">${i+1}</span><span style="flex:1;font-size:15px">${n}</span><span style="font-size:14px;color:var(--red)">${cnt}개</span></div>`).join('')}</div>` : ''}
+    ${topFrequent.length>0 ? `<div class="sec-header"><span class="sec-title">최근 30일 자주 구매 🔄</span><span class="sec-action" onclick="switchTab('shopping');setTimeout(showFrequentItems,200)">장보기 추가 →</span></div><div class="card">${topFrequent.map(([n,cnt],i)=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;${i<topFrequent.length-1?'border-bottom:1px solid var(--border)':''}"><span style="font-size:16px;font-weight:700;color:var(--primary);width:20px">${i+1}</span><span style="flex:1;font-size:15px">${n}</span><span style="font-size:14px;color:var(--sub)">${cnt}회</span></div>`).join('')}</div>` : ''}
     ${all.length===0 ? `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">아직 데이터가 없어요</div><div class="empty-sub">재고를 추가하면 통계가 나타납니다</div></div>` : ''}
     <div style="height:30px"></div>
   </div>`;
