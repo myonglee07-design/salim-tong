@@ -554,30 +554,44 @@ function loadBarcodeLib() {
 async function lookupBarcode(code) {
   const settings = getSettings();
   const r = document.getElementById('scan-result');
-  if (!settings.apiKey) {
-    if (r) r.textContent = '⚠️ 설정에서 식품안전처 API 키를 먼저 입력해주세요.';
-    const nf = document.getElementById('f-name'); if(nf) nf.value = code;
-    return;
-  }
   if (r) r.textContent = `바코드 ${code} 조회 중...`;
+
+  // 1순위: Open Food Facts (키 없이 바로 사용)
   try {
-    const url = `https://corsproxy.io/?https://openapi.foodsafetykorea.go.kr/api/${settings.apiKey}/C005/json/1/5/BAR_CD=${code}`;
-    const res = await fetch(url);
+    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
     const data = await res.json();
-    const rows = data?.C005?.row;
-    if (rows?.length > 0) {
-      const name = rows[0].PRDLST_NM || rows[0].BSSH_NM || '';
+    if (data.status === 1) {
+      const name = data.product?.product_name_ko || data.product?.product_name || '';
       if (name) {
-        const nf=document.getElementById('f-name'); if(nf) nf.value=name;
+        const nf = document.getElementById('f-name'); if(nf) nf.value = name;
         if (r) r.textContent = `✅ "${name}" 자동 입력됨`;
         showToast(`"${name}" 입력됨`);
         return;
       }
     }
-    if (r) r.textContent = '등록되지 않은 상품입니다. 직접 입력해주세요.';
-  } catch(e) {
-    if (r) r.textContent = '조회 실패. 직접 입력해주세요.';
+  } catch(e) {}
+
+  // 2순위: 식약처 I2570 fallback (API 키 있을 때만)
+  if (settings.apiKey) {
+    try {
+      const url = `https://corsproxy.io/?https://openapi.foodsafetykorea.go.kr/api/${settings.apiKey}/I2570/json/1/5/BRCD_NO=${code}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const rows = data?.I2570?.row;
+      if (rows?.length > 0) {
+        const name = rows[0].PRDLST_NM || rows[0].PRDT_NM || rows[0].BSSH_NM || '';
+        if (name) {
+          const nf = document.getElementById('f-name'); if(nf) nf.value = name;
+          if (r) r.textContent = `✅ "${name}" 자동 입력됨`;
+          showToast(`"${name}" 입력됨`);
+          return;
+        }
+      }
+    } catch(e) {}
   }
+
+  // 둘 다 실패
+  if (r) r.textContent = '등록되지 않은 상품입니다. 직접 입력해주세요.';
 }
 
 /* ========== SHOPPING ========== */
@@ -874,7 +888,7 @@ function renderSettings() {
     <div style="padding:0 16px 14px"><button class="btn btn-s btn-sm" onclick="saveCardSettings()">저장</button></div>
     <div class="sec-header"><span class="sec-title">알림</span></div>    <div class="set-list"><div class="set-item" onclick="navigate('noti-settings',{})"><div class="set-icon">🔔</div><div class="set-info"><div class="set-title">알림 시간 설정</div><div class="set-sub">현재: ${s.notificationEnabled?s.notificationTime:'꺼짐'}</div></div><span class="set-arrow">›</span></div></div>
     <div class="sec-header"><span class="sec-title">바코드 API 설정</span></div>
-    <div class="fg" style="margin-top:4px"><label class="fl">식품안전처 API 키</label><input class="fi" id="api-key" type="password" placeholder="API 키 입력..." value="${s.apiKey}"><div style="margin-top:8px"><button class="btn btn-s" onclick="saveApiKey()" style="padding:10px">저장</button></div><div style="font-size:12px;color:var(--sub);margin-top:8px;line-height:1.5">📌 식품안전나라 → 오픈API → 회원가입 → 이용신청 → 인증키 자동 발급 (무료)</div></div>
+    <div class="fg" style="margin-top:4px"><label class="fl">식품안전처 API 키 (선택)</label><input class="fi" id="api-key" type="password" placeholder="API 키 입력..." value="${s.apiKey}"><div style="margin-top:8px"><button class="btn btn-s" onclick="saveApiKey()" style="padding:10px">저장</button></div><div style="font-size:12px;color:var(--sub);margin-top:10px;line-height:1.8">📌 <b>바코드 조회 방식</b><br>1순위: Open Food Facts (키 없이 자동 사용, 무료)<br>2순위: 식품안전나라 I2570 API (키 입력 시 fallback)<br><span style="color:var(--sub)">→ 키 없어도 대부분 국산 식품 조회 가능<br>조회 안 되는 상품은 직접 입력</span><br><span style="color:var(--primary)">식약처 키 발급: 식품안전나라 → 공공데이터 활용 → Open API → I2570 활용신청 (무료)</span></div></div>
     <div class="sec-header"><span class="sec-title">데이터</span></div>    <div class="set-list"><div class="set-item" onclick="exportData()"><div class="set-icon">📤</div><div class="set-info"><div class="set-title">데이터 내보내기</div><div class="set-sub">JSON 파일로 저장</div></div><span class="set-arrow">›</span></div></div>
     <div style="height:30px"></div>
   </div>`;
