@@ -13,10 +13,8 @@
 <link id="pwa-manifest" rel="manifest">
 <link id="apple-icon" rel="apple-touch-icon">
 <script>
-// ── PWA 아이콘 SVG ──
-const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#1aab97"/><text x="256" y="340" font-size="280" text-anchor="middle" font-family="serif">🥬</text></svg>`;
-const iconBlob = new Blob([ICON_SVG], {type:'image/svg+xml'});
-const iconUrl = URL.createObjectURL(iconBlob);
+// ── PWA 아이콘 ──
+const iconUrl = 'https://myonglee07-design.github.io/salim-tong/icon.png';
 document.getElementById('apple-icon').href = iconUrl;
 
 // ── PWA Manifest ──
@@ -30,8 +28,8 @@ const manifest = {
   theme_color: '#1aab97',
   orientation: 'portrait',
   icons: [
-    { src: iconUrl, sizes: '192x192', type: 'image/svg+xml' },
-    { src: iconUrl, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+    { src: iconUrl, sizes: '192x192', type: 'image/png' },
+    { src: iconUrl, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
   ]
 };
 const mBlob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
