@@ -326,6 +326,20 @@ function getDDay(exp) {
   const e=new Date(exp); e.setHours(0,0,0,0);
   return Math.floor((e-n)/86400000);
 }
+function getElapsed(purchaseDate) {
+  if (!purchaseDate) return null;
+  const n=new Date(); n.setHours(0,0,0,0);
+  const p=new Date(purchaseDate); p.setHours(0,0,0,0);
+  return Math.floor((n-p)/86400000);
+}
+function elapsedBadge(days) {
+  if (days===null) return '';
+  if (days===0) return `<span class="dday-badge dd-green">오늘 구매</span>`;
+  if (days<=2) return `<span class="dday-badge dd-green">+${days}일</span>`;
+  if (days<=4) return `<span class="dday-badge dd-yellow">+${days}일</span>`;
+  if (days<=6) return `<span class="dday-badge dd-orange">+${days}일</span>`;
+  return `<span class="dday-badge dd-red">+${days}일 경과</span>`;
+}
 function ddBadge(d) {
   if (d===null) return '';
   if (d<0) return `<span class="dday-badge dd-red">만료</span>`;
@@ -333,6 +347,11 @@ function ddBadge(d) {
   if (d<=3) return `<span class="dday-badge dd-orange">D-${d}</span>`;
   if (d<=7) return `<span class="dday-badge dd-yellow">D-${d}</span>`;
   return `<span class="dday-badge dd-green">D-${d}</span>`;
+}
+// 유통기한 있으면 D-day, 없으면 경과일
+function itemBadge(it) {
+  if (it.expiryDate) return ddBadge(getDDay(it.expiryDate));
+  return elapsedBadge(getElapsed(it.purchaseDate));
 }
 function catClass(c) { return ({냉장:'bc-cold',냉동:'bc-frozen',실온:'bc-room',기타:'bc-other'})[c]||'bc-other'; }
 function catColor(c) { return ({냉장:'var(--cold)',냉동:'var(--frozen)',실온:'var(--room)',기타:'var(--other)'})[c]||'var(--other)'; }
@@ -366,7 +385,7 @@ async function renderHome() {
       <div class="stat-card" style="cursor:pointer" onclick="switchTab('stock');setStockFilter('냉동')"><div class="stat-val" style="color:var(--frozen)">${active.filter(i=>i.category==='냉동').length}</div><div class="stat-lbl">냉동</div></div>
     </div>
     ${expired.length>0||warn.length>0 ? `<div class="sec-header"><span class="sec-title">임박 품목</span></div>
-    ${[...expired,...warn].slice(0,4).map(it=>`<div class="item-card" onclick="_detailId=${it.id};navigate('stock-detail',{id:${it.id}})"><div class="cat-bar" style="background:${catColor(it.category)}"></div><div style="flex:1;min-width:0"><div class="item-name">${it.name}</div><div class="item-sub">${fmtDate(it.expiryDate)}</div></div>${ddBadge(getDDay(it.expiryDate))}</div>`).join('')}` : ''}
+    ${[...expired,...warn].slice(0,4).map(it=>`<div class="item-card" onclick="_detailId=${it.id};navigate('stock-detail',{id:${it.id}})"><div class="cat-bar" style="background:${catColor(it.category)}"></div><div style="flex:1;min-width:0"><div class="item-name">${it.name}</div><div class="item-sub">${fmtDate(it.expiryDate)}</div></div>${itemBadge(it)}</div>`).join('')}` : ''}
     <div class="sec-header"><span class="sec-title">빠른 이동</span></div>
     <div class="quick-grid">
       <div class="quick-card" onclick="navigate('stock-add',{})"><div class="quick-icon">➕</div><div class="quick-label">재고 추가</div></div>
@@ -394,7 +413,7 @@ async function renderStock() {
     <div style="padding:10px 16px 4px"><input class="fi" id="stk-search" placeholder="🔍 검색..." oninput="stockSearch()" style="margin:0"></div>
     <div class="cat-filter">${cats.map(ct=>`<div class="cat-tab ${stockFilter===ct?'active':''}" onclick="setStockFilter('${ct}')">${ct}</div>`).join('')}<div class="cat-tab" onclick="promptAddCat()" style="padding:6px 12px;font-size:16px;font-weight:700;color:var(--primary);border-color:var(--primary)">+</div></div>
     ${filtered.length===0 ? `<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">재고가 없어요</div><div class="empty-sub">+ 버튼으로 추가해보세요</div></div>` :
-      filtered.map(it=>`<div class="item-card" id="ic-${it.id}" onclick="_detailId=${it.id};navigate('stock-detail',{id:${it.id}})"><div class="cat-bar" style="background:${catColor(it.category)}"></div><div style="flex:1;min-width:0"><div class="item-name">${it.name}${it.isFavorite?' ⭐':''}</div><div class="item-sub"><span class="cat-badge ${catClass(it.category)}">${it.category}</span><span>${it.quantity}${it.unit||'개'}</span><span>${fmtDate(it.expiryDate)}</span></div></div>${ddBadge(getDDay(it.expiryDate))}</div>`).join('')}
+      filtered.map(it=>`<div class="item-card" id="ic-${it.id}" onclick="_detailId=${it.id};navigate('stock-detail',{id:${it.id}})"><div class="cat-bar" style="background:${catColor(it.category)}"></div><div style="flex:1;min-width:0"><div class="item-name">${it.name}${it.isFavorite?' ⭐':''}</div><div class="item-sub"><span class="cat-badge ${catClass(it.category)}">${it.category}</span><span>${it.quantity}${it.unit||'개'}</span><span>${it.expiryDate?fmtDate(it.expiryDate):'구매 '+fmtDate(it.purchaseDate)}</span></div></div>${itemBadge(it)}</div>`).join('')}
     <div style="height:80px"></div>
   </div>`;
   addFab(()=>navigate('stock-add',{}));
@@ -430,7 +449,7 @@ async function renderStockAdd(p={}) {
     </div>
     <div class="form-row">
       <div class="fg"><label class="fl">구매일</label><input class="fi" id="f-buy" type="date" value="${item.purchaseDate||todayStr()}" onclick="this.showPicker&&this.showPicker()"></div>
-      <div class="fg"><label class="fl">유통기한</label><input class="fi" id="f-exp" type="date" value="${item.expiryDate||''}" onclick="this.showPicker&&this.showPicker()"></div>
+      <div class="fg"><label class="fl">유통기한</label><input class="fi" id="f-exp" type="date" value="${item.expiryDate||''}" onclick="this.showPicker&&this.showPicker()"><div style="font-size:12px;color:var(--sub);margin-top:5px">📌 신선식품은 비워두면 구매 후 며칠 됐는지 자동으로 표시돼요</div></div>
     </div>
     <div class="fg"><label class="fl">결제 수단</label>${payMethodHtml()}</div>
     <div class="fg"><label class="fl">가격 (원)</label><input class="fi" id="f-price" type="number" step="100" placeholder="0" value="${item.price||''}"></div>
@@ -468,13 +487,13 @@ async function renderStockDetail(id) {
   _detailId = id;
   const it = await dbGet('items', id);
   if (!it) { goBack(); return; }
-  const dday = getDDay(it.expiryDate);
+  const elapsed = getElapsed(it.purchaseDate);
   const c = document.getElementById('content');
   c.innerHTML = `<div class="view">
     <div class="card" style="margin-top:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:6px"><span class="cat-badge ${catClass(it.category)}">${it.category}</span>${it.isFavorite?'<span>⭐</span>':''}</div>
-        ${ddBadge(dday)}
+        ${itemBadge(it)}
       </div>
       <div style="font-size:22px;font-weight:700;margin-bottom:14px">${it.name}</div>
       <div class="dvd"></div>
@@ -482,7 +501,7 @@ async function renderStockDetail(id) {
         <div><div style="font-size:12px;color:var(--sub)">수량</div><div style="font-size:16px;font-weight:600">${it.quantity}${it.unit||'개'}</div></div>
         <div><div style="font-size:12px;color:var(--sub)">가격</div><div style="font-size:16px;font-weight:600">${fmtKRW(it.price)}</div></div>
         <div><div style="font-size:12px;color:var(--sub)">구매일</div><div style="font-size:16px;font-weight:600">${fmtDate(it.purchaseDate)}</div></div>
-        <div><div style="font-size:12px;color:var(--sub)">유통기한</div><div style="font-size:16px;font-weight:600">${fmtDate(it.expiryDate)}</div></div>
+        <div><div style="font-size:12px;color:var(--sub)">${it.expiryDate?'유통기한':'경과일'}</div><div style="font-size:16px;font-weight:600">${it.expiryDate?fmtDate(it.expiryDate):(elapsed!==null?elapsed+'일 경과':'-')}</div></div>
       </div>
       ${it.memo ? `<div class="dvd" style="margin-top:12px"></div><div style="margin-top:10px"><div style="font-size:12px;color:var(--sub);margin-bottom:5px">메모</div><div class="memo-box">${it.memo}</div></div>` : ''}
     </div>
@@ -749,7 +768,7 @@ async function renderStockFromShopping(p={}) {
     <div style="padding:0 16px"><label class="fl">결제 수단</label>${payMethodHtml()}</div>
     <div class="form-row" style="padding:0 16px">
       <div class="fg"><label class="fl">가격 (원)</label><input class="fi" id="f-price" type="number" step="100" placeholder="0"></div>
-      <div class="fg"><label class="fl">유통기한</label><input class="fi" id="f-exp" type="date" onclick="this.showPicker&&this.showPicker()"></div>
+      <div class="fg"><label class="fl">유통기한</label><input class="fi" id="f-exp" type="date" onclick="this.showPicker&&this.showPicker()"><div style="font-size:12px;color:var(--sub);margin-top:5px">📌 신선식품은 비워두면 구매 후 며칠 됐는지 자동으로 표시돼요</div></div>
     </div>
     <div style="padding:8px 16px 30px">
       <button class="btn btn-p" onclick="saveAndNext(${idx})">✅ 등록하고 다음</button>
@@ -844,7 +863,7 @@ function renderSettings() {
   c.innerHTML = `<div class="view">
     <div style="padding:16px 16px 8px"><div class="card" style="text-align:center;margin:0"><div style="font-size:32px;margin-bottom:6px">🥦</div><div style="font-size:15px;font-weight:700;color:var(--primary)">살림통</div><div style="font-size:12px;color:var(--sub)">v${APP_VERSION}</div></div></div>
     <div class="sec-header"><span class="sec-title">테마 색상</span></div>
-    <div style="padding:0 16px 14px;display:flex;flex-wrap:wrap;gap:10px">
+    <div style="padding:0 16px 14px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center">
       ${THEMES.map(t=>`<div onclick="setTheme('${t.id}')" style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:10px 12px;border-radius:14px;border:2px solid ${s.theme===t.id?'var(--primary)':'var(--border)'};background:${s.theme===t.id?'var(--primary-light)':'var(--card)'};min-width:64px;transition:all .15s">
         <span style="font-size:24px">${t.emoji}</span>
         <span style="font-size:12px;font-weight:600;color:${s.theme===t.id?'var(--primary)':'var(--sub)'}">${t.label}</span>
