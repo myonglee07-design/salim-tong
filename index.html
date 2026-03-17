@@ -16,6 +16,18 @@
   --text:#2d3436;--sub:#636e72;--bg:#f0faf9;--card:#fff;--border:#dff0ee;
   --cold:#4dabf7;--frozen:#845ef7;--room:#fd7e14;--other:#868e96;
 }
+/* 테마: 로즈핑크 */
+body.theme-rosepink{--primary:#e91e8c;--primary-light:#fce4f3;--primary-dark:#c2185b;--bg:#fdf0f8;--border:#f8bde8}
+/* 테마: 피치 */
+body.theme-peach{--primary:#ff6b6b;--primary-light:#fff0f0;--primary-dark:#e05555;--bg:#fff5f5;--border:#ffd5d5}
+/* 테마: 라벤더 */
+body.theme-lavender{--primary:#9575cd;--primary-light:#f3eeff;--primary-dark:#7b5ba6;--bg:#f5f0ff;--border:#e1d5f5}
+/* 테마: 스카이블루 */
+body.theme-skyblue{--primary:#42a5f5;--primary-light:#e8f4fe;--primary-dark:#1e88e5;--bg:#f0f8ff;--border:#c8e6fc}
+/* 테마: 옐로우 */
+body.theme-yellow{--primary:#f59e0b;--primary-light:#fffbeb;--primary-dark:#d97706;--bg:#fffdf0;--border:#fde68a}
+/* 테마: 베이비핑크 */
+body.theme-babypink{--primary:#f48fb1;--primary-light:#fff0f5;--primary-dark:#e06090;--bg:#fff5f8;--border:#fad4e5}
 html,body{height:100%;overflow:hidden}
 body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text)}
 body.fs-sm #content, body.fs-sm #bottom-nav { zoom: 0.87; }
@@ -229,7 +241,7 @@ const dbPut = (s, d) => new Promise((res, rej) => { const r = db.transaction(s,'
 const dbDel = (s, id) => new Promise((res, rej) => { const r = db.transaction(s,'readwrite').objectStore(s).delete(id); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error); });
 
 /* ========== SETTINGS / FAVORITES ========== */
-const getSettings = () => { try { return { notificationEnabled:true, notificationTime:'09:00', apiKey:'', lastNotiDate:'', fontSize:'md', cardName:'', cardPayDay:15, cardStartDay:2, lastPayMethod:'card', ...JSON.parse(localStorage.getItem('salimCfg')||'{}') }; } catch { return { notificationEnabled:true, notificationTime:'09:00', apiKey:'', lastNotiDate:'', fontSize:'md', cardName:'', cardPayDay:15, cardStartDay:2, lastPayMethod:'card' }; } };
+const getSettings = () => { try { return { notificationEnabled:true, notificationTime:'09:00', apiKey:'', lastNotiDate:'', fontSize:'md', cardName:'', cardPayDay:15, cardStartDay:2, lastPayMethod:'card', theme:'mint', ...JSON.parse(localStorage.getItem('salimCfg')||'{}') }; } catch { return { notificationEnabled:true, notificationTime:'09:00', apiKey:'', lastNotiDate:'', fontSize:'md', cardName:'', cardPayDay:15, cardStartDay:2, lastPayMethod:'card', theme:'mint' }; } };
 const saveSettings = s => localStorage.setItem('salimCfg', JSON.stringify(s));
 const getFavs = () => { try { return JSON.parse(localStorage.getItem('salimFavs')||'[]'); } catch { return []; } };
 const saveFavs = f => localStorage.setItem('salimFavs', JSON.stringify(f));
@@ -552,11 +564,9 @@ function loadBarcodeLib() {
 }
 
 async function lookupBarcode(code) {
-  const settings = getSettings();
   const r = document.getElementById('scan-result');
   if (r) r.textContent = `바코드 ${code} 조회 중...`;
 
-  // 1순위: Open Food Facts (키 없이 바로 사용)
   try {
     const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
     const data = await res.json();
@@ -571,26 +581,6 @@ async function lookupBarcode(code) {
     }
   } catch(e) {}
 
-  // 2순위: 식약처 I2570 fallback (API 키 있을 때만)
-  if (settings.apiKey) {
-    try {
-      const url = `https://corsproxy.io/?https://openapi.foodsafetykorea.go.kr/api/${settings.apiKey}/I2570/json/1/5/BRCD_NO=${code}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      const rows = data?.I2570?.row;
-      if (rows?.length > 0) {
-        const name = rows[0].PRDLST_NM || rows[0].PRDT_NM || rows[0].BSSH_NM || '';
-        if (name) {
-          const nf = document.getElementById('f-name'); if(nf) nf.value = name;
-          if (r) r.textContent = `✅ "${name}" 자동 입력됨`;
-          showToast(`"${name}" 입력됨`);
-          return;
-        }
-      }
-    } catch(e) {}
-  }
-
-  // 둘 다 실패
   if (r) r.textContent = '등록되지 않은 상품입니다. 직접 입력해주세요.';
 }
 
@@ -853,6 +843,13 @@ function renderSettings() {
   const c = document.getElementById('content');
   c.innerHTML = `<div class="view">
     <div style="padding:16px 16px 8px"><div class="card" style="text-align:center;margin:0"><div style="font-size:32px;margin-bottom:6px">🥦</div><div style="font-size:15px;font-weight:700;color:var(--primary)">살림통</div><div style="font-size:12px;color:var(--sub)">v${APP_VERSION}</div></div></div>
+    <div class="sec-header"><span class="sec-title">테마 색상</span></div>
+    <div style="padding:0 16px 14px;display:flex;flex-wrap:wrap;gap:10px">
+      ${THEMES.map(t=>`<div onclick="setTheme('${t.id}')" style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:10px 12px;border-radius:14px;border:2px solid ${s.theme===t.id?'var(--primary)':'var(--border)'};background:${s.theme===t.id?'var(--primary-light)':'var(--card)'};min-width:64px;transition:all .15s">
+        <span style="font-size:24px">${t.emoji}</span>
+        <span style="font-size:12px;font-weight:600;color:${s.theme===t.id?'var(--primary)':'var(--sub)'}">${t.label}</span>
+      </div>`).join('')}
+    </div>
     <div class="sec-header"><span class="sec-title">글씨 크기</span></div>
     <div style="padding:0 16px 14px"><div class="fs-btns">
       ${[['sm','가','작게'],['md','가','보통'],['lg','가','크게'],['xl','가','아주크게']].map(([sz,ch,lbl],i)=>`<div class="fs-btn ${s.fontSize===sz?'active':''}" onclick="setFontSize('${sz}')" style="font-size:${13+i*4}px">${ch}<div style="font-size:11px;margin-top:3px;font-family:'Noto Sans KR',sans-serif">${lbl}</div></div>`).join('')}
@@ -888,7 +885,7 @@ function renderSettings() {
     <div style="padding:0 16px 14px"><button class="btn btn-s btn-sm" onclick="saveCardSettings()">저장</button></div>
     <div class="sec-header"><span class="sec-title">알림</span></div>    <div class="set-list"><div class="set-item" onclick="navigate('noti-settings',{})"><div class="set-icon">🔔</div><div class="set-info"><div class="set-title">알림 시간 설정</div><div class="set-sub">현재: ${s.notificationEnabled?s.notificationTime:'꺼짐'}</div></div><span class="set-arrow">›</span></div></div>
     <div class="sec-header"><span class="sec-title">바코드 API 설정</span></div>
-    <div class="fg" style="margin-top:4px"><label class="fl">식품안전처 API 키 (선택)</label><input class="fi" id="api-key" type="password" placeholder="API 키 입력..." value="${s.apiKey}"><div style="margin-top:8px"><button class="btn btn-s" onclick="saveApiKey()" style="padding:10px">저장</button></div><div style="font-size:12px;color:var(--sub);margin-top:10px;line-height:1.8">📌 <b>바코드 조회 방식</b><br>1순위: Open Food Facts (키 없이 자동 사용, 무료)<br>2순위: 식품안전나라 I2570 API (키 입력 시 fallback)<br><span style="color:var(--sub)">→ 키 없어도 대부분 국산 식품 조회 가능<br>조회 안 되는 상품은 직접 입력</span><br><span style="color:var(--primary)">식약처 키 발급: 식품안전나라 → 공공데이터 활용 → Open API → I2570 활용신청 (무료)</span></div></div>
+    <div class="fg" style="margin-top:4px"><label class="fl">바코드 API 키 (선택)</label><input class="fi" id="api-key" type="password" placeholder="API 키 입력..." value="${s.apiKey}"><div style="margin-top:8px"><button class="btn btn-s" onclick="saveApiKey()" style="padding:10px">저장</button></div><div style="font-size:12px;color:var(--sub);margin-top:10px;line-height:1.8">📌 <b>바코드 조회 방식</b><br><span style="color:var(--primary)">✅ Open Food Facts 기반으로 키 없이 무료 사용 가능</span><br>조회 안 되는 상품은 직접 입력<br><span style="color:var(--sub)">다른 API 연동 시 이 칸에 키를 입력하세요</span></div></div>
     <div class="sec-header"><span class="sec-title">데이터</span></div>    <div class="set-list"><div class="set-item" onclick="exportData()"><div class="set-icon">📤</div><div class="set-info"><div class="set-title">데이터 내보내기</div><div class="set-sub">JSON 파일로 저장</div></div><span class="set-arrow">›</span></div></div>
     <div style="height:30px"></div>
   </div>`;
@@ -1040,11 +1037,30 @@ function applyFontSize(sz) {
   document.body.classList.add('fs-'+sz);
 }
 
+const THEMES = [
+  { id:'mint',      emoji:'🌿', label:'민트',     },
+  { id:'rosepink',  emoji:'🌸', label:'로즈핑크', },
+  { id:'peach',     emoji:'🍑', label:'피치',     },
+  { id:'lavender',  emoji:'💜', label:'라벤더',   },
+  { id:'skyblue',   emoji:'💙', label:'스카이블루',},
+  { id:'yellow',    emoji:'🌼', label:'옐로우',   },
+  { id:'babypink',  emoji:'🩷', label:'베이비핑크',},
+];
+function setTheme(id) {
+  const s=getSettings(); s.theme=id; saveSettings(s);
+  applyTheme(id); renderSettings();
+}
+function applyTheme(id) {
+  THEMES.forEach(t => document.body.classList.remove('theme-'+t.id));
+  if (id !== 'mint') document.body.classList.add('theme-'+id);
+}
+
 /* ========== INIT ========== */
 const safePush = () => { try { history.pushState(null,'','#'); } catch(e){} };
 window.addEventListener('DOMContentLoaded', async () => {
   await initDB();
   applyFontSize(getSettings().fontSize);
+  applyTheme(getSettings().theme);
   switchTab('home');
   safePush();
   window.addEventListener('popstate',()=>{ goBack(); safePush(); });
