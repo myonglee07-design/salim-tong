@@ -43,13 +43,13 @@ body.fs-xl #content, body.fs-xl #bottom-nav { zoom: 1.33; }
 #header{
   background:linear-gradient(120deg,#138a79 0%,#1aab97 55%,#26c9b2 100%);
   padding:18px 16px 16px;border-bottom:none;
-  display:flex;align-items:center;gap:10px;min-height:80px;flex-shrink:0;z-index:10;
+  display:flex;align-items:center;gap:10px;height:80px;min-height:80px;max-height:80px;flex-shrink:0;z-index:10;position:relative;overflow:hidden;
   position:relative;overflow:hidden;
 }
 #header::before{content:'🥬';position:absolute;right:52px;top:50%;transform:translateY(-50%);font-size:34px;opacity:.18;pointer-events:none}
 #header::after{content:'';position:absolute;right:-18px;top:-18px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none}
 #back-btn{width:36px;height:36px;display:none;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,.18);cursor:pointer;font-size:20px;color:#fff;flex-shrink:0;z-index:1}
-#header-title{font-size:40px;font-weight:800;flex:1;color:#fff;letter-spacing:.5px;z-index:1;text-align:center;font-family:'Jua',sans-serif}
+#header-title{font-size:48px;font-weight:800;flex:1;color:#fff;letter-spacing:.5px;z-index:1;text-align:center;font-family:'Jua',sans-serif}
 #header-action{font-size:13px;font-weight:700;color:#fff;cursor:pointer;padding:6px 12px;border-radius:20px;background:rgba(255,255,255,.2);z-index:1;white-space:nowrap;font-family:'Noto Sans KR',sans-serif}
 #header-action:empty{display:none}
 
@@ -213,7 +213,7 @@ textarea.fi{resize:none}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 
 /* ========== DB ========== */
 let db;
@@ -305,7 +305,7 @@ function renderView(view) {
   el('content').scrollTop = 0;
   removeFab();
   switch(view) {
-    case 'home':           el('header-title').textContent='살림통'; renderHome(); break;
+    case 'home':           el('header-title').innerHTML='살림통<span style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:600;color:rgba(255,255,255,.85);font-family:\'Noto Sans KR\',sans-serif;letter-spacing:0;background:rgba(0,0,0,.15);padding:3px 8px;border-radius:10px">v'+APP_VERSION+'</span>'; renderHome(); break;
     case 'stock':          el('header-title').textContent='재고'; renderStock(); break;
     case 'stock-add':      el('header-title').textContent=p.edit?'품목 수정':'품목 추가'; renderStockAdd(p); break;
     case 'stock-detail':   el('header-title').textContent='품목 상세'; renderStockDetail(p.id||_detailId); break;
@@ -905,7 +905,11 @@ function renderSettings() {
     <div class="sec-header"><span class="sec-title">알림</span></div>    <div class="set-list"><div class="set-item" onclick="navigate('noti-settings',{})"><div class="set-icon">🔔</div><div class="set-info"><div class="set-title">알림 시간 설정</div><div class="set-sub">현재: ${s.notificationEnabled?s.notificationTime:'꺼짐'}</div></div><span class="set-arrow">›</span></div></div>
     <div class="sec-header"><span class="sec-title">바코드 API 설정</span></div>
     <div class="fg" style="margin-top:4px"><label class="fl">바코드 API 키 (선택)</label><input class="fi" id="api-key" type="password" placeholder="API 키 입력..." value="${s.apiKey}"><div style="margin-top:8px"><button class="btn btn-s" onclick="saveApiKey()" style="padding:10px">저장</button></div><div style="font-size:12px;color:var(--sub);margin-top:10px;line-height:1.8">📌 <b>바코드 조회 방식</b><br><span style="color:var(--primary)">✅ Open Food Facts 기반으로 키 없이 무료 사용 가능</span><br>조회 안 되는 상품은 직접 입력<br><span style="color:var(--sub)">다른 API 연동 시 이 칸에 키를 입력하세요</span></div></div>
-    <div class="sec-header"><span class="sec-title">데이터</span></div>    <div class="set-list"><div class="set-item" onclick="exportData()"><div class="set-icon">📤</div><div class="set-info"><div class="set-title">데이터 내보내기</div><div class="set-sub">JSON 파일로 저장</div></div><span class="set-arrow">›</span></div></div>
+    <div class="sec-header"><span class="sec-title">데이터</span></div>
+    <div class="set-list">
+      <div class="set-item" onclick="exportData()"><div class="set-icon">📤</div><div class="set-info"><div class="set-title">전체 백업</div><div class="set-sub">설정·재고·장보기 JSON으로 저장</div></div><span class="set-arrow">›</span></div>
+      <div class="set-item" onclick="importData()"><div class="set-icon">📥</div><div class="set-info"><div class="set-title">백업 복구</div><div class="set-sub">JSON 파일로 전체 복구</div></div><span class="set-arrow">›</span></div>
+    </div>
     <div style="height:30px"></div>
   </div>`;
 }
@@ -949,10 +953,73 @@ function saveCardSettings() {
 function delFav(name) { removeFav(name); renderSettings(); showToast('즐겨찾기에서 삭제됨'); }
 function delCustomCat(name) { removeCustomCat(name); renderSettings(); showToast(`"${name}" 삭제됨`); }
 async function exportData() {
-  const items=await dbAll('items'); const shopping=await dbAll('shopping');
-  const blob=new Blob([JSON.stringify({version:APP_VERSION,exportDate:todayStr(),items,shopping},null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`salimtong-backup-${todayStr()}.json`; a.click(); URL.revokeObjectURL(url);
-  showToast('내보내기 완료');
+  const items = await dbAll('items');
+  const shopping = await dbAll('shopping');
+  const settings = localStorage.getItem('salimCfg') || '{}';
+  const favs = localStorage.getItem('salimFavs') || '[]';
+  const cats = localStorage.getItem('salimCats') || '[]';
+  const backup = {
+    version: APP_VERSION,
+    exportDate: todayStr(),
+    settings: JSON.parse(settings),
+    favs: JSON.parse(favs),
+    cats: JSON.parse(cats),
+    items, shopping
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `salimtong-backup-${todayStr()}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('전체 백업 완료');
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = async e => {
+    const file = e.target.files[0]; if (!file) return;
+    const text = await file.text();
+    let data;
+    try { data = JSON.parse(text); } catch { showToast('파일 형식이 올바르지 않아요'); return; }
+    // 확인 다이얼로그
+    const overlay = document.createElement('div');
+    overlay.id = 'import-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center';
+    overlay.innerHTML = `<div style="background:#fff;border-radius:20px;padding:24px 20px;margin:0 24px;width:100%;max-width:320px" onclick="event.stopPropagation()">
+      <div style="font-size:22px;text-align:center;margin-bottom:8px">📥</div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:6px;text-align:center">백업 복구</div>
+      <div style="font-size:13px;color:var(--sub);margin-bottom:18px;text-align:center;line-height:1.6">백업일: ${data.exportDate||'알 수 없음'}<br>재고 ${(data.items||[]).length}개 · 장보기 ${(data.shopping||[]).length}개<br><span style="color:var(--red);font-weight:600">현재 데이터가 모두 교체됩니다</span></div>
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('import-overlay').remove()" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">취소</button>
+        <button onclick="confirmImport()" style="flex:1;padding:12px;border-radius:12px;border:none;background:var(--primary);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">복구</button>
+      </div>
+    </div>`;
+    overlay.onclick = () => overlay.remove();
+    document.body.appendChild(overlay);
+    window._importData = data;
+  };
+  input.click();
+}
+
+async function confirmImport() {
+  const data = window._importData; if (!data) return;
+  document.getElementById('import-overlay')?.remove();
+  // 설정 복구
+  if (data.settings) localStorage.setItem('salimCfg', JSON.stringify(data.settings));
+  if (data.favs) localStorage.setItem('salimFavs', JSON.stringify(data.favs));
+  if (data.cats) localStorage.setItem('salimCats', JSON.stringify(data.cats));
+  // DB 복구
+  const tx = db.transaction(['items','shopping'],'readwrite');
+  tx.objectStore('items').clear();
+  tx.objectStore('shopping').clear();
+  await new Promise(res=>tx.oncomplete=res);
+  for (const it of (data.items||[])) await dbAdd('items', {...it, id:undefined});
+  for (const it of (data.shopping||[])) await dbAdd('shopping', {...it, id:undefined});
+  showToast('복구 완료!');
+  applyFontSize(getSettings().fontSize);
+  applyTheme(getSettings().theme);
+  switchTab('home');
 }
 
 /* ========== NOTI SETTINGS ========== */
