@@ -187,6 +187,17 @@ textarea.fi{resize:none}
 .fav-chips{display:flex;flex-wrap:wrap;gap:7px;padding:0 16px 10px}
 .fav-chip{padding:6px 13px;border-radius:20px;background:var(--card);border:1.5px solid var(--border);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
 .fav-chip:active{background:var(--primary-light);border-color:var(--primary);color:var(--primary)}
+/* ── 날짜 휠 피커 ── */
+.date-wheel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-end;justify-content:center}
+.date-wheel-box{background:#fff;border-radius:20px 20px 0 0;padding:0;width:100%;max-width:480px}
+.date-wheel-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border)}
+.date-wheel-body{display:flex;overflow:hidden;padding:0 8px}
+.date-wheel-col{flex:1;height:200px;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;text-align:center;position:relative}
+.date-wheel-col::-webkit-scrollbar{display:none}
+.date-wheel-item{scroll-snap-align:center;height:44px;line-height:44px;font-size:16px;color:var(--sub);cursor:pointer;transition:all .1s}
+.date-wheel-item.sel{font-size:19px;font-weight:700;color:var(--text)}
+.date-wheel-mask{position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,rgba(255,255,255,.92) 0%,transparent 35%,transparent 65%,rgba(255,255,255,.92) 100%)}
+.date-wheel-line{position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:44px;border-top:1.5px solid var(--border);border-bottom:1.5px solid var(--border);pointer-events:none;z-index:1}
 
 /* Settings */
 .set-list{padding:0 16px}
@@ -250,7 +261,7 @@ textarea.fi{resize:none}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 
 /* ========== DB ========== */
 let db;
@@ -490,7 +501,14 @@ async function renderStockAdd(p={}) {
     </div>
     <div class="form-row">
       <div class="fg"><label class="fl">구매일</label><input class="fi" id="f-buy" type="date" value="${item.purchaseDate||todayStr()}" onclick="this.showPicker&&this.showPicker()"></div>
-      <div class="fg"><label class="fl">유통기한</label><input class="fi" id="f-exp" type="date" value="${item.expiryDate||''}" onclick="this.showPicker&&this.showPicker()"><div style="font-size:12px;color:var(--sub);margin-top:5px">📌 신선식품은 비워두면 구매 후 며칠 됐는지 자동으로 표시돼요</div></div>
+      <div class="fg"><label class="fl">유통기한</label>
+        <div class="fi" id="f-exp-display" onclick="openDateWheel(document.getElementById('f-exp').value, v=>{document.getElementById('f-exp').value=v;document.getElementById('f-exp-display').querySelector('span').textContent=v?v:'날짜 선택 (없으면 건너뛰기)';document.getElementById('f-exp-display').querySelector('span').style.color=v?'var(--text)':'var(--sub)'})" style="-webkit-user-select:none;user-select:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+          <span style="color:${item.expiryDate?'var(--text)':'var(--sub)'}">${item.expiryDate||'날짜 선택 (없으면 건너뛰기)'}</span>
+          <span style="color:var(--sub);font-size:18px">📅</span>
+        </div>
+        <input type="hidden" id="f-exp" value="${item.expiryDate||''}">
+        <div style="font-size:12px;color:var(--sub);margin-top:5px">📌 신선식품은 비워두면 구매 후 며칠 됐는지 자동으로 표시돼요</div>
+      </div>
     </div>
     <div class="fg"><label class="fl">결제 수단</label>${payMethodHtml()}</div>
     <div class="fg"><label class="fl">가격 (원)</label><input class="fi" id="f-price" type="number" step="100" placeholder="0" value="${item.price||''}"></div>
@@ -955,7 +973,14 @@ async function renderStockFromShopping(p={}) {
     <div style="padding:0 16px"><label class="fl">결제 수단</label>${payMethodHtml()}</div>
     <div class="form-row" style="padding:0 16px">
       <div class="fg"><label class="fl">가격 (원)</label><input class="fi" id="f-price" type="number" step="100" placeholder="0"></div>
-      <div class="fg"><label class="fl">유통기한</label><input class="fi" id="f-exp" type="date" onclick="this.showPicker&&this.showPicker()"><div style="font-size:12px;color:var(--sub);margin-top:5px">📌 신선식품은 비워두면 구매 후 며칠 됐는지 자동으로 표시돼요</div></div>
+      <div class="fg"><label class="fl">유통기한</label>
+        <div class="fi" id="f-exp-display" onclick="openDateWheel(document.getElementById('f-exp').value, v=>{document.getElementById('f-exp').value=v;document.getElementById('f-exp-display').querySelector('span').textContent=v?v:'날짜 선택 (없으면 건너뛰기)';document.getElementById('f-exp-display').querySelector('span').style.color=v?'var(--text)':'var(--sub)'})" style="-webkit-user-select:none;user-select:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+          <span style="color:var(--sub)">날짜 선택 (없으면 건너뛰기)</span>
+          <span style="color:var(--sub);font-size:18px">📅</span>
+        </div>
+        <input type="hidden" id="f-exp" value="">
+        <div style="font-size:12px;color:var(--sub);margin-top:5px">📌 신선식품은 비워두면 구매 후 며칠 됐는지 자동으로 표시돼요</div>
+      </div>
     </div>
     <div style="padding:8px 16px 30px">
       <button class="btn btn-p" onclick="saveAndNext(${idx})">✅ 등록하고 다음</button>
@@ -1107,6 +1132,80 @@ function renderSettings() {
   </div>`;
 }
 function saveApiKey() { const s=getSettings(); s.apiKey=document.getElementById('api-key').value.trim(); saveSettings(s); showToast('API 키 저장됨'); }
+
+/* ── 날짜 휠 피커 ── */
+let _wheelCb = null;
+function openDateWheel(currentVal, cb) {
+  _wheelCb = cb;
+  const now = new Date();
+  const cur = currentVal ? new Date(currentVal) : now;
+  let selY = cur.getFullYear(), selM = cur.getMonth()+1, selD = cur.getDate();
+  const years = Array.from({length:20}, (_,i) => now.getFullYear()-1+i);
+  const months = Array.from({length:12}, (_,i) => i+1);
+  function daysInMonth(y,m){ return new Date(y,m,0).getDate(); }
+  function getDays(){ return Array.from({length:daysInMonth(selY,selM)},(_,i)=>i+1); }
+
+  const ov = document.createElement('div');
+  ov.className = 'date-wheel-overlay';
+  ov.innerHTML = `<div class="date-wheel-box" onclick="event.stopPropagation()">
+    <div class="date-wheel-header">
+      <button onclick="document.getElementById('dwo').remove()" style="background:none;border:none;font-size:15px;font-weight:600;color:var(--sub);cursor:pointer;font-family:inherit">취소</button>
+      <div style="font-size:16px;font-weight:700">날짜 선택</div>
+      <button onclick="confirmDateWheel()" style="background:none;border:none;font-size:15px;font-weight:700;color:var(--primary);cursor:pointer;font-family:inherit">확인</button>
+    </div>
+    <div style="position:relative"><div class="date-wheel-line"></div>
+    <div class="date-wheel-body">
+      <div class="date-wheel-col" id="dwY">${years.map(y=>`<div class="date-wheel-item${y===selY?' sel':''}" data-v="${y}">${y}년</div>`).join('')}</div>
+      <div class="date-wheel-col" id="dwM">${months.map(m=>`<div class="date-wheel-item${m===selM?' sel':''}" data-v="${m}">${m}월</div>`).join('')}</div>
+      <div class="date-wheel-col" id="dwD">${getDays().map(d=>`<div class="date-wheel-item${d===selD?' sel':''}" data-v="${d}">${d}일</div>`).join('')}</div>
+    </div>
+    <div class="date-wheel-mask"></div></div>
+    <div style="padding:16px"></div>
+  </div>`;
+  ov.id = 'dwo';
+  ov.onclick = () => ov.remove();
+  document.body.appendChild(ov);
+
+  // 스크롤 초기 위치
+  window._dwY = selY; window._dwM = selM; window._dwD = selD;
+  ['dwY','dwM','dwD'].forEach(id => {
+    const col = document.getElementById(id);
+    const sel = col.querySelector('.sel');
+    if (sel) col.scrollTop = sel.offsetTop - 78;
+    col.addEventListener('scroll', () => onWheelScroll(id), { passive:true });
+  });
+}
+function onWheelScroll(id) {
+  const col = document.getElementById(id);
+  if (!col) return;
+  const idx = Math.round(col.scrollTop / 44);
+  col.querySelectorAll('.date-wheel-item').forEach((el,i) => el.classList.toggle('sel', i===idx));
+  const selEl = col.querySelectorAll('.date-wheel-item')[idx];
+  if (!selEl) return;
+  const v = Number(selEl.dataset.v);
+  if (id==='dwY') { window._dwY=v; refreshDayWheel(); }
+  else if (id==='dwM') { window._dwM=v; refreshDayWheel(); }
+  else if (id==='dwD') { window._dwD=v; }
+}
+function refreshDayWheel() {
+  const y = window._dwY || new Date().getFullYear();
+  const m = window._dwM || 1;
+  const curD = window._dwD || 1;
+  const total = new Date(y,m,0).getDate();
+  const col = document.getElementById('dwD'); if (!col) return;
+  const newD = Math.min(curD, total);
+  col.innerHTML = Array.from({length:total},(_,i)=>i+1).map(d=>`<div class="date-wheel-item${d===newD?' sel':''}" data-v="${d}">${d}일</div>`).join('');
+  const sel = col.querySelector('.sel');
+  if (sel) col.scrollTop = sel.offsetTop - 78;
+}
+function confirmDateWheel() {
+  const y = window._dwY || new Date().getFullYear();
+  const m = String(window._dwM||1).padStart(2,'0');
+  const d = String(window._dwD||1).padStart(2,'0');
+  const val = `${y}-${m}-${d}`;
+  document.getElementById('dwo')?.remove();
+  if (_wheelCb) _wheelCb(val);
+}
 function triggerInstall() {
   if (_deferredInstallPrompt) {
     _deferredInstallPrompt.prompt();
@@ -1347,7 +1446,7 @@ function applyTheme(id) {
 
 /* ========== INIT ========== */
 const TAB_ORDER = ['home','stock','shopping','stats','settings'];
-const safePush = () => { try { history.pushState(null,'','#'); } catch(e){} };
+const safePush = () => { try { if (window.history && window.location.href !== 'about:srcdoc') history.pushState(null,'','#'); } catch(e){} };
 window.addEventListener('DOMContentLoaded', async () => {
   await initDB();
   applyFontSize(getSettings().fontSize);
