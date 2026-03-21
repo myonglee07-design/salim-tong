@@ -1346,6 +1346,7 @@ function applyTheme(id) {
 }
 
 /* ========== INIT ========== */
+const TAB_ORDER = ['home','stock','shopping','stats','settings'];
 const safePush = () => { try { history.pushState(null,'','#'); } catch(e){} };
 window.addEventListener('DOMContentLoaded', async () => {
   await initDB();
@@ -1355,6 +1356,25 @@ window.addEventListener('DOMContentLoaded', async () => {
   safePush();
   window.addEventListener('popstate',()=>{ goBack(); safePush(); });
   setTimeout(checkNotifications, 2500);
+
+  // ── 좌우 스와이프로 탭 전환 ──
+  let _tx = 0, _ty = 0;
+  const content = document.getElementById('content');
+  content.addEventListener('touchstart', e => {
+    _tx = e.touches[0].clientX;
+    _ty = e.touches[0].clientY;
+  }, { passive: true });
+  content.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - _tx;
+    const dy = e.changedTouches[0].clientY - _ty;
+    // 수평 스와이프만 (수직 스크롤 무시), 최소 60px 이상
+    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
+    // 자식 뷰(상세/추가 화면)에서는 스와이프 탭 전환 안 함
+    if (stacks[curTab].length > 1) return;
+    const idx = TAB_ORDER.indexOf(curTab);
+    if (dx < 0 && idx < TAB_ORDER.length - 1) switchTab(TAB_ORDER[idx + 1]); // 왼쪽 → 다음 탭
+    if (dx > 0 && idx > 0) switchTab(TAB_ORDER[idx - 1]); // 오른쪽 → 이전 탭
+  }, { passive: true });
 });
 </script>
 </body>
