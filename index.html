@@ -261,7 +261,7 @@ textarea.fi{resize:none}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.7.0';
 
 /* ========== DB ========== */
 let db;
@@ -393,7 +393,7 @@ function elapsedBadge(days) {
 }
 function ddBadge(d) {
   if (d===null) return '';
-  if (d<0) return `<span class="dday-badge dd-red">만료</span>`;
+  if (d<0) return `<span class="dday-badge dd-red">+${Math.abs(d)}일 경과</span>`;
   if (d===0) return `<span class="dday-badge dd-red">D-Day</span>`;
   if (d<=3) return `<span class="dday-badge dd-orange">D-${d}</span>`;
   if (d<=7) return `<span class="dday-badge dd-yellow">D-${d}</span>`;
