@@ -20,7 +20,7 @@ window.addEventListener('beforeinstallprompt', e => {
 });
 if ('serviceWorker' in navigator) {
   const swCode = `
-const CACHE = 'salimtong-v1.7.20';
+const CACHE = 'salimtong-v1.7.21';
 self.addEventListener('install', e => {
   self.skipWaiting();
 });
@@ -130,8 +130,7 @@ body.fs-xl #content, body.fs-xl #bottom-nav { zoom: 1.33; }
 .sec-title{font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px}
 .sec-action{font-size:13px;color:var(--primary);cursor:pointer}
 
-.item-card{background:var(--card);border-radius:14px;padding:13px 16px 13px 20px;margin:0 16px 8px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);cursor:pointer;transition:transform .1s;position:relative;overflow:hidden;touch-action:manipulation}
-.item-card.dragging{touch-action:none}
+.item-card{background:var(--card);border-radius:14px;padding:13px 16px 13px 20px;margin:0 16px 8px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);cursor:pointer;transition:transform .1s;position:relative;overflow:hidden;touch-action:pan-y}
 .item-card:active{transform:scale(.98)}
 .cat-bar{position:absolute;left:0;top:0;bottom:0;width:4px}
 .item-name{font-size:15px;font-weight:600}
@@ -262,9 +261,16 @@ textarea.fi{resize:none}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = '1.7.20';
+const APP_VERSION = '1.7.21';
 
 const UPDATE_LOGS = {
+  '1.7.21': {
+    date: '2026.04.24',
+    items: [
+      '수동 정렬 드래그 문제 최종 해결',
+      '드래그 시작되지 않던 문제와 목록 스크롤 문제 동시 수정'
+    ]
+  },
   '1.7.20': {
     date: '2026.04.24',
     items: [
@@ -838,7 +844,6 @@ function _startDrag(e) {
   const rect = card.getBoundingClientRect();
   const zoomStr = getComputedStyle(card).zoom || '1';
   _dragState.zoomFactor = parseFloat(zoomStr) || 1;
-  card.classList.add('dragging');
   card.style.transition = 'none';
   card.style.zIndex = '100';
   card.style.opacity = '0.85';
@@ -977,7 +982,6 @@ function _cleanupDrag() {
   const pid = _dragState.pointerId;
   if (card) {
     try { if (pid != null && card.hasPointerCapture?.(pid)) card.releasePointerCapture(pid); } catch (err) {}
-    card.classList.remove('dragging');
     card.style.transition = '';
     card.style.zIndex = '';
     card.style.opacity = '';
