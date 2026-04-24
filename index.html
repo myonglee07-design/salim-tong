@@ -20,7 +20,7 @@ window.addEventListener('beforeinstallprompt', e => {
 });
 if ('serviceWorker' in navigator) {
   const swCode = `
-const CACHE = 'salimtong-v1.7.26';
+const CACHE = 'salimtong-v1.7.27';
 self.addEventListener('install', e => {
   self.skipWaiting();
 });
@@ -266,9 +266,16 @@ textarea.fi{resize:none}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = '1.7.26';
+const APP_VERSION = '1.7.27';
 
 const UPDATE_LOGS = {
+  '1.7.27': {
+    date: '2026.04.24',
+    items: [
+      '재고 수정 후 뒤로가기 시 홈으로 바로 나가던 문제 해결',
+      '저장 후 뒤로가기 동작 안정화'
+    ]
+  },
   '1.7.26': {
     date: '2026.04.24',
     items: [
@@ -1119,15 +1126,20 @@ async function saveItem(editId) {
   if (editId) {
     await dbPut('items',{...it,id:editId});
     showToast('수정되었습니다');
-    stacks[curTab].pop();
     _detailId = editId;
     params['stock-detail'] = {id: editId};
+    stacks[curTab].pop();
+    _skipPop = true;
+    history.back();
     renderView('stock-detail');
   } else {
     it.order = await _nextItemOrder();
     await dbAdd('items',it);
     showToast('저장되었습니다');
-    goBack();
+    stacks[curTab].pop();
+    _skipPop = true;
+    history.back();
+    renderView(curView());
   }
 }
 
