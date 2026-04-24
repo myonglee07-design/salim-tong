@@ -20,7 +20,7 @@ window.addEventListener('beforeinstallprompt', e => {
 });
 if ('serviceWorker' in navigator) {
   const swCode = `
-const CACHE = 'salimtong-v1.7.18';
+const CACHE = 'salimtong-v1.7.19';
 self.addEventListener('install', e => {
   self.skipWaiting();
 });
@@ -130,7 +130,8 @@ body.fs-xl #content, body.fs-xl #bottom-nav { zoom: 1.33; }
 .sec-title{font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px}
 .sec-action{font-size:13px;color:var(--primary);cursor:pointer}
 
-.item-card{background:var(--card);border-radius:14px;padding:13px 16px 13px 20px;margin:0 16px 8px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);cursor:pointer;transition:transform .1s;position:relative;overflow:hidden}
+.item-card{background:var(--card);border-radius:14px;padding:13px 16px 13px 20px;margin:0 16px 8px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);cursor:pointer;transition:transform .1s;position:relative;overflow:hidden;touch-action:manipulation}
+body.sort-manual .item-card{touch-action:none}
 .item-card:active{transform:scale(.98)}
 .cat-bar{position:absolute;left:0;top:0;bottom:0;width:4px}
 .item-name{font-size:15px;font-weight:600}
@@ -261,9 +262,16 @@ textarea.fi{resize:none}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = '1.7.18';
+const APP_VERSION = '1.7.19';
 
 const UPDATE_LOGS = {
+  '1.7.19': {
+    date: '2026.04.24',
+    items: [
+      '수동 정렬 드래그 동작 안정화',
+      '일부 안드로이드 폰에서 드래그가 즉시 취소되던 문제 해결'
+    ]
+  },
   '1.7.18': {
     date: '2026.04.24',
     items: [
@@ -824,7 +832,6 @@ function _startDrag(e) {
   card.style.opacity = '0.85';
   card.style.transform = 'scale(1.03)';
   card.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
-  card.style.touchAction = 'none';
   const container = card.parentElement;
   const cards = Array.from(container.querySelectorAll('.item-card'));
   _dragState.cards = cards;
@@ -959,7 +966,6 @@ function _cleanupDrag() {
     card.style.opacity = '';
     card.style.transform = '';
     card.style.boxShadow = '';
-    card.style.touchAction = '';
   }
   if (_dragState.cards) {
     _dragState.cards.forEach(c => {
@@ -1924,6 +1930,7 @@ async function confirmImport() {
   applyFontSize(getSettings().fontSize);
   applyTheme(getSettings().theme);
   applyThemeMode();
+  applySortMode();
   switchTab('home');
 }
 
@@ -2047,7 +2054,12 @@ function setThemeMode(mode) {
 }
 function setSortMode(mode) {
   const s=getSettings(); s.sortMode=mode; saveSettings(s);
+  applySortMode();
   renderSettings();
+}
+function applySortMode() {
+  const mode = getSettings().sortMode || 'auto-exp';
+  document.body.classList.toggle('sort-manual', mode === 'manual');
 }
 function applyThemeMode() {
   const mode = (getSettings().themeMode) || 'light';
@@ -2086,6 +2098,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   applyFontSize(getSettings().fontSize);
   applyTheme(getSettings().theme);
   applyThemeMode();
+  applySortMode();
   setInterval(() => { if (getSettings().themeMode === 'auto') applyThemeMode(); }, 60000);
   setTimeout(checkForUpdate, 3000);
   setInterval(checkForUpdate, 5 * 60 * 1000);
