@@ -20,7 +20,7 @@ window.addEventListener('beforeinstallprompt', e => {
 });
 if ('serviceWorker' in navigator) {
   const swCode = `
-const CACHE = 'salimtong-v1.7.17';
+const CACHE = 'salimtong-v1.7.18';
 self.addEventListener('install', e => {
   self.skipWaiting();
 });
@@ -261,9 +261,17 @@ textarea.fi{resize:none}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = '1.7.17';
+const APP_VERSION = '1.7.18';
 
 const UPDATE_LOGS = {
+  '1.7.18': {
+    date: '2026.04.24',
+    items: [
+      '수동 정렬 드래그 버그 수정',
+      '길게 눌렀을 때 카드가 다시 가라앉고 움직이지 않던 문제 해결',
+      '드래그 중 브라우저 스크롤 간섭 방어 강화'
+    ]
+  },
   '1.7.17': {
     date: '2026.04.24',
     items: [
@@ -762,10 +770,12 @@ function _onItemPointerDown(e) {
   _dragState = {
     itemId,
     el: card,
+    pointerId: e.pointerId,
     startY: e.clientY,
     longPressTimer: null,
     isDragging: false
   };
+  try { card.setPointerCapture(e.pointerId); } catch (err) {}
   _dragState.longPressTimer = setTimeout(() => { _startDrag(e); }, 450);
   document.addEventListener('pointermove', _onItemPointerMove, { passive: false });
   document.addEventListener('pointerup', _onItemPointerUp);
@@ -814,7 +824,7 @@ function _startDrag(e) {
   card.style.opacity = '0.85';
   card.style.transform = 'scale(1.03)';
   card.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
-  card.style.pointerEvents = 'none';
+  card.style.touchAction = 'none';
   const container = card.parentElement;
   const cards = Array.from(container.querySelectorAll('.item-card'));
   _dragState.cards = cards;
@@ -941,13 +951,15 @@ async function _reorderItems(movedItemId, newIndex) {
 function _cleanupDrag() {
   if (!_dragState) return;
   const card = _dragState.el;
+  const pid = _dragState.pointerId;
   if (card) {
+    try { if (pid != null && card.hasPointerCapture?.(pid)) card.releasePointerCapture(pid); } catch (err) {}
     card.style.transition = '';
     card.style.zIndex = '';
     card.style.opacity = '';
     card.style.transform = '';
     card.style.boxShadow = '';
-    card.style.pointerEvents = '';
+    card.style.touchAction = '';
   }
   if (_dragState.cards) {
     _dragState.cards.forEach(c => {
