@@ -20,7 +20,7 @@ window.addEventListener('beforeinstallprompt', e => {
 });
 if ('serviceWorker' in navigator) {
   const swCode = `
-const CACHE = 'salimtong-v1.7.21';
+const CACHE = 'salimtong-v1.7.22';
 self.addEventListener('install', e => {
   self.skipWaiting();
 });
@@ -130,7 +130,11 @@ body.fs-xl #content, body.fs-xl #bottom-nav { zoom: 1.33; }
 .sec-title{font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px}
 .sec-action{font-size:13px;color:var(--primary);cursor:pointer}
 
-.item-card{background:var(--card);border-radius:14px;padding:13px 16px 13px 20px;margin:0 16px 8px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);cursor:pointer;transition:transform .1s;position:relative;overflow:hidden;touch-action:pan-y}
+.item-card{background:var(--card);border-radius:14px;padding:13px 16px 13px 20px;margin:0 16px 8px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);cursor:pointer;transition:transform .1s;position:relative;overflow:hidden}
+.drag-handle{display:none;position:absolute;right:4px;top:50%;transform:translateY(-50%);width:40px;height:40px;align-items:center;justify-content:center;color:var(--sub);font-size:20px;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.drag-handle:active{cursor:grabbing}
+body.sort-manual .drag-handle{display:flex}
+body.sort-manual .item-card{padding-right:48px}
 .item-card:active{transform:scale(.98)}
 .cat-bar{position:absolute;left:0;top:0;bottom:0;width:4px}
 .item-name{font-size:15px;font-weight:600}
@@ -261,9 +265,17 @@ textarea.fi{resize:none}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = '1.7.21';
+const APP_VERSION = '1.7.22';
 
 const UPDATE_LOGS = {
+  '1.7.22': {
+    date: '2026.04.24',
+    items: [
+      '수동 정렬 드래그 방식 개선',
+      '카드 오른쪽 핸들(≡)을 눌러 드래그 가능',
+      '스크롤과 드래그가 명확히 분리되어 안정성 향상'
+    ]
+  },
   '1.7.21': {
     date: '2026.04.24',
     items: [
@@ -771,33 +783,39 @@ async function renderStock() {
     <div style="padding:10px 16px 4px"><input class="fi" id="stk-search" placeholder="🔍 검색..." oninput="stockSearch()" style="margin:0"></div>
     <div class="cat-filter">${cats.map(ct=>`<div class="cat-tab ${stockFilter===ct?'active':''}" onclick="setStockFilter('${escQ(ct)}')">${_esc(ct)}</div>`).join('')}<div class="cat-tab" onclick="promptAddCat()" style="padding:6px 12px;font-size:16px;font-weight:700;color:var(--primary);border-color:var(--primary)">+</div></div>
     ${filtered.length===0 ? `<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">재고가 없어요</div><div class="empty-sub">+ 버튼으로 추가해보세요</div></div>` :
-      filtered.map(it=>`<div class="item-card" id="ic-${it.id}" onclick="_detailId=${it.id};navigate('stock-detail',{id:${it.id}})"><div class="cat-bar" style="background:${catColor(it.category)}"></div><div style="flex:1;min-width:0"><div class="item-name">${_esc(it.name)}${it.isFavorite?' ⭐':''}</div><div class="item-sub"><span class="cat-badge ${catClass(it.category)}">${_esc(it.category)}</span><span>${it.quantity}${_esc(it.unit||'개')}</span><span>${it.expiryDate?fmtDate(it.expiryDate):'구매 '+fmtDate(it.purchaseDate)}</span></div></div>${itemBadge(it)}</div>`).join('')}
+      filtered.map(it=>`<div class="item-card" id="ic-${it.id}" onclick="_detailId=${it.id};navigate('stock-detail',{id:${it.id}})"><div class="cat-bar" style="background:${catColor(it.category)}"></div><div style="flex:1;min-width:0"><div class="item-name">${_esc(it.name)}${it.isFavorite?' ⭐':''}</div><div class="item-sub"><span class="cat-badge ${catClass(it.category)}">${_esc(it.category)}</span><span>${it.quantity}${_esc(it.unit||'개')}</span><span>${it.expiryDate?fmtDate(it.expiryDate):'구매 '+fmtDate(it.purchaseDate)}</span></div></div>${itemBadge(it)}<div class="drag-handle" data-itemid="${it.id}">≡</div></div>`).join('')}
     <div style="height:80px"></div>
   </div>`;
   addFab(()=>navigate('stock-add',{}));
   if (sortMode === 'manual') {
-    document.querySelectorAll('#content .item-card').forEach(card => {
-      card.addEventListener('pointerdown', _onItemPointerDown);
+    document.querySelectorAll('#content .drag-handle').forEach(handle => {
+      handle.addEventListener('pointerdown', _onHandlePointerDown);
     });
   }
 }
 function setStockFilter(f) { stockFilter=f; renderStock(); }
 
-function _onItemPointerDown(e) {
+function _onHandlePointerDown(e) {
   if (getSettings().sortMode !== 'manual') return;
-  const card = e.currentTarget;
+  e.stopPropagation();
+  e.preventDefault();
+  const handle = e.currentTarget;
+  const card = handle.closest('.item-card');
+  if (!card) return;
   const itemId = Number(card.id.replace('ic-', ''));
   if (!itemId) return;
   _dragState = {
     itemId,
     el: card,
+    handle,
     pointerId: e.pointerId,
     startY: e.clientY,
+    lastY: e.clientY,
     longPressTimer: null,
     isDragging: false
   };
-  try { card.setPointerCapture(e.pointerId); } catch (err) {}
-  _dragState.longPressTimer = setTimeout(() => { _startDrag(e); }, 450);
+  try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+  _dragState.longPressTimer = setTimeout(() => { _startDrag(e); }, 100);
   document.addEventListener('pointermove', _onItemPointerMove, { passive: false });
   document.addEventListener('pointerup', _onItemPointerUp);
   document.addEventListener('pointercancel', _onItemPointerUp);
@@ -980,8 +998,11 @@ function _cleanupDrag() {
   if (!_dragState) return;
   const card = _dragState.el;
   const pid = _dragState.pointerId;
+  const handle = _dragState.handle;
+  if (handle && pid != null) {
+    try { if (handle.hasPointerCapture?.(pid)) handle.releasePointerCapture(pid); } catch (err) {}
+  }
   if (card) {
-    try { if (pid != null && card.hasPointerCapture?.(pid)) card.releasePointerCapture(pid); } catch (err) {}
     card.style.transition = '';
     card.style.zIndex = '';
     card.style.opacity = '';
@@ -1685,7 +1706,7 @@ function renderSettings() {
         <div class="fs-btn ${s.sortMode==='auto-recent'?'active':''}" onclick="setSortMode('auto-recent')" style="font-size:13px;flex:1 1 45%;min-width:0">🆕<div style="font-size:11px;margin-top:3px;font-family:'Noto Sans KR',sans-serif">최근 등록</div></div>
         <div class="fs-btn ${s.sortMode==='manual'?'active':''}" onclick="setSortMode('manual')" style="font-size:13px;flex:1 1 45%;min-width:0">✋<div style="font-size:11px;margin-top:3px;font-family:'Noto Sans KR',sans-serif">수동</div></div>
       </div>
-      ${s.sortMode==='manual' ? `<div style="margin-top:8px;font-size:11px;color:var(--sub);text-align:center">✋ 재고 목록에서 아이템을 길게 누르면 드래그 이동 가능</div>` : ''}
+      ${s.sortMode==='manual' ? `<div style="margin-top:8px;font-size:11px;color:var(--sub);text-align:center">✋ 재고 목록 오른쪽 핸들(≡)을 눌러 드래그 이동 가능</div>` : ''}
     </div>
     <div class="sec-header"><span class="sec-title">테마 색상</span></div>
     <div style="padding:0 16px 14px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center">
