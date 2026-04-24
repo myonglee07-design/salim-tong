@@ -20,7 +20,7 @@ window.addEventListener('beforeinstallprompt', e => {
 });
 if ('serviceWorker' in navigator) {
   const swCode = `
-const CACHE = 'salimtong-v1.7.22';
+const CACHE = 'salimtong-v1.7.26';
 self.addEventListener('install', e => {
   self.skipWaiting();
 });
@@ -204,6 +204,7 @@ textarea.fi{resize:none}
 .date-wheel-body{display:flex;overflow:hidden;padding:0 8px}
 .date-wheel-col{flex:1;height:200px;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;text-align:center;position:relative}
 .date-wheel-col::-webkit-scrollbar{display:none}
+.date-wheel-col::before,.date-wheel-col::after{content:'';display:block;height:78px;flex-shrink:0}
 .date-wheel-item{scroll-snap-align:center;height:44px;line-height:44px;font-size:16px;color:var(--sub);cursor:pointer;transition:all .1s}
 .date-wheel-item.sel{font-size:19px;font-weight:700;color:var(--text)}
 .date-wheel-mask{position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,rgba(255,255,255,.92) 0%,transparent 35%,transparent 65%,rgba(255,255,255,.92) 100%)}
@@ -265,9 +266,39 @@ textarea.fi{resize:none}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = '1.7.22';
+const APP_VERSION = '1.7.26';
 
 const UPDATE_LOGS = {
+  '1.7.26': {
+    date: '2026.04.24',
+    items: [
+      '뒤로가기 동작 개선',
+      '홈에서 재고 아이템 탭 시 뒤로가기 누르면 재고 목록으로 이동',
+      '홈에서 재고 추가 후 뒤로가기 시 재고 목록 확인 가능'
+    ]
+  },
+  '1.7.25': {
+    date: '2026.04.24',
+    items: [
+      '날짜 수정 시 연도가 왕복으로 되돌아가지 않던 문제 해결',
+      '날짜 휠이 정중앙에 정렬되지 않던 문제 수정',
+      '과거 연도 선택 범위 확대 (5년 전까지)'
+    ]
+  },
+  '1.7.24': {
+    date: '2026.04.24',
+    items: [
+      '드래그 핸들 크기 조정',
+      '실사용 피드백에 따라 기존 40×40 컴팩트 핸들로 복원'
+    ]
+  },
+  '1.7.23': {
+    date: '2026.04.24',
+    items: [
+      '드래그 핸들 영역 확대',
+      '카드 오른쪽 전체가 드래그 영역이 되어 더 쉽게 잡힘'
+    ]
+  },
   '1.7.22': {
     date: '2026.04.24',
     items: [
@@ -748,10 +779,10 @@ async function renderHome() {
       <div class="stat-card" style="cursor:pointer" onclick="switchTab('stock');setStockFilter('냉동')"><div class="stat-val" style="color:var(--frozen)">${active.filter(i=>i.category==='냉동').length}</div><div class="stat-lbl">냉동</div></div>
     </div>
     ${expired.length>0||warn.length>0 ? `<div class="sec-header"><span class="sec-title">임박 품목</span></div>
-    ${[...expired,...warn].slice(0,4).map(it=>`<div class="item-card" onclick="_detailId=${it.id};navigate('stock-detail',{id:${it.id}})"><div class="cat-bar" style="background:${catColor(it.category)}"></div><div style="flex:1;min-width:0"><div class="item-name">${it.name}</div><div class="item-sub">${fmtDate(it.expiryDate)}</div></div>${itemBadge(it)}</div>`).join('')}` : ''}
+    ${[...expired,...warn].slice(0,4).map(it=>`<div class="item-card" onclick="switchTab('stock');_detailId=${it.id};navigate('stock-detail',{id:${it.id}})"><div class="cat-bar" style="background:${catColor(it.category)}"></div><div style="flex:1;min-width:0"><div class="item-name">${it.name}</div><div class="item-sub">${fmtDate(it.expiryDate)}</div></div>${itemBadge(it)}</div>`).join('')}` : ''}
     <div class="sec-header"><span class="sec-title">빠른 이동</span></div>
     <div class="quick-grid">
-      <div class="quick-card" onclick="navigate('stock-add',{})"><div class="quick-icon">➕</div><div class="quick-label">재고 추가</div></div>
+      <div class="quick-card" onclick="switchTab('stock');navigate('stock-add',{})"><div class="quick-icon">➕</div><div class="quick-label">재고 추가</div></div>
       <div class="quick-card" onclick="switchTab('shopping')"><div class="quick-icon">🛒</div><div class="quick-label">장보기 목록</div></div>
     </div>
   </div>`;
@@ -1762,7 +1793,7 @@ function renderSettings() {
 function saveApiKey() { const s=getSettings(); s.apiKey=document.getElementById('api-key').value.trim(); saveSettings(s); showToast('API 키 저장됨'); }
 
 let _wheelCb = null;
-let _dwSilent = false;
+let _dwSilent = { dwY: false, dwM: false, dwD: false };
 let _dragState = null;
 let _autoScrollTimer = null;
 function openDateWheel(currentVal, cb) {
@@ -1770,7 +1801,7 @@ function openDateWheel(currentVal, cb) {
   const now = new Date();
   const cur = currentVal ? new Date(currentVal) : now;
   let selY = cur.getFullYear(), selM = cur.getMonth()+1, selD = cur.getDate();
-  const years = Array.from({length:20}, (_,i) => now.getFullYear()-1+i);
+  const years = Array.from({length:25}, (_,i) => now.getFullYear()-5+i);
   const months = Array.from({length:12}, (_,i) => i+1);
   function daysInMonth(y,m){ return new Date(y,m,0).getDate(); }
   function getDays(){ return Array.from({length:daysInMonth(selY,selM)},(_,i)=>i+1); }
@@ -1799,17 +1830,21 @@ function openDateWheel(currentVal, cb) {
   _openOverlay('dwo');
 
   window._dwY = selY; window._dwM = selM; window._dwD = selD;
-  _dwSilent = true;
+  _dwSilent.dwY = _dwSilent.dwM = _dwSilent.dwD = true;
   ['dwY','dwM','dwD'].forEach(id => {
     const col = document.getElementById(id);
     const sel = col.querySelector('.sel');
     if (sel) col.scrollTop = sel.offsetTop - 78;
     col.addEventListener('scroll', () => onWheelScroll(id), { passive:true });
   });
-  setTimeout(() => { _dwSilent = false; }, 100);
+  setTimeout(() => {
+    _dwSilent.dwY = false;
+    _dwSilent.dwM = false;
+    _dwSilent.dwD = false;
+  }, 100);
 }
 function onWheelScroll(id) {
-  if (_dwSilent) return;
+  if (_dwSilent[id]) return;
   const col = document.getElementById(id);
   if (!col) return;
   const items = col.querySelectorAll('.date-wheel-item');
@@ -1840,9 +1875,9 @@ function refreshDayWheel() {
   col.innerHTML = Array.from({length:total},(_,i)=>i+1).map(d=>`<div class="date-wheel-item${d===newD?' sel':''}" data-v="${d}">${d}일</div>`).join('');
   const sel = col.querySelector('.sel');
   if (sel) {
-    _dwSilent = true;
+    _dwSilent.dwD = true;
     col.scrollTop = sel.offsetTop - 78;
-    setTimeout(() => { _dwSilent = false; }, 100);
+    setTimeout(() => { _dwSilent.dwD = false; }, 100);
   }
 }
 function confirmDateWheel() {
