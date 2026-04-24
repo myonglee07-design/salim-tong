@@ -20,7 +20,7 @@ window.addEventListener('beforeinstallprompt', e => {
 });
 if ('serviceWorker' in navigator) {
   const swCode = `
-const CACHE = 'salimtong-v1.7.19';
+const CACHE = 'salimtong-v1.7.20';
 self.addEventListener('install', e => {
   self.skipWaiting();
 });
@@ -131,7 +131,7 @@ body.fs-xl #content, body.fs-xl #bottom-nav { zoom: 1.33; }
 .sec-action{font-size:13px;color:var(--primary);cursor:pointer}
 
 .item-card{background:var(--card);border-radius:14px;padding:13px 16px 13px 20px;margin:0 16px 8px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);cursor:pointer;transition:transform .1s;position:relative;overflow:hidden;touch-action:manipulation}
-body.sort-manual .item-card{touch-action:none}
+.item-card.dragging{touch-action:none}
 .item-card:active{transform:scale(.98)}
 .cat-bar{position:absolute;left:0;top:0;bottom:0;width:4px}
 .item-name{font-size:15px;font-weight:600}
@@ -262,9 +262,16 @@ textarea.fi{resize:none}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = '1.7.19';
+const APP_VERSION = '1.7.20';
 
 const UPDATE_LOGS = {
+  '1.7.20': {
+    date: '2026.04.24',
+    items: [
+      '수동 정렬 모드에서 목록 스크롤이 안 되던 문제 해결',
+      '드래그 중 카드 이동량이 과도하게 컸던 문제 수정'
+    ]
+  },
   '1.7.19': {
     date: '2026.04.24',
     items: [
@@ -798,6 +805,7 @@ function _onItemPointerMove(e) {
     _cleanupDrag();
     return;
   }
+  _dragState.lastY = e.clientY;
   if (_dragState.isDragging) {
     e.preventDefault();
     _updateDragPosition(e);
@@ -824,9 +832,13 @@ function _onItemPointerUp(e) {
 function _startDrag(e) {
   if (!_dragState) return;
   _dragState.isDragging = true;
+  if (_dragState.lastY != null) _dragState.startY = _dragState.lastY;
   navigator.vibrate?.(40);
   const card = _dragState.el;
   const rect = card.getBoundingClientRect();
+  const zoomStr = getComputedStyle(card).zoom || '1';
+  _dragState.zoomFactor = parseFloat(zoomStr) || 1;
+  card.classList.add('dragging');
   card.style.transition = 'none';
   card.style.zIndex = '100';
   card.style.opacity = '0.85';
@@ -848,7 +860,8 @@ function _startDrag(e) {
 function _updateDragPosition(e) {
   if (!_dragState || !_dragState.isDragging) return;
   const card = _dragState.el;
-  const dy = e.clientY - _dragState.startY;
+  const zf = _dragState.zoomFactor || 1;
+  const dy = (e.clientY - _dragState.startY) / zf;
   card.style.transform = `translateY(${dy}px) scale(1.03)`;
   const fingerY = e.clientY;
   let newTarget = _dragState.currentIndex;
@@ -901,13 +914,16 @@ function _startAutoScroll(speed) {
   const scroller = document.getElementById('content');
   if (!scroller) return;
   _autoScrollTimer = setInterval(() => {
+    const prev = scroller.scrollTop;
     scroller.scrollTop += speed;
+    const actual = scroller.scrollTop - prev;
     if (_dragState && _dragState.cards) {
       _dragState.cardPositions = _dragState.cards.map(c => ({
         el: c,
         top: c.getBoundingClientRect().top,
         height: c.offsetHeight
       }));
+      _dragState.startY -= actual;
     }
   }, 16);
 }
@@ -961,6 +977,7 @@ function _cleanupDrag() {
   const pid = _dragState.pointerId;
   if (card) {
     try { if (pid != null && card.hasPointerCapture?.(pid)) card.releasePointerCapture(pid); } catch (err) {}
+    card.classList.remove('dragging');
     card.style.transition = '';
     card.style.zIndex = '';
     card.style.opacity = '';
