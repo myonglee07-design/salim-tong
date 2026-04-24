@@ -20,7 +20,7 @@ window.addEventListener('beforeinstallprompt', e => {
 });
 if ('serviceWorker' in navigator) {
   const swCode = `
-const CACHE = 'salimtong-v1.7.11';
+const CACHE = 'salimtong-v1.7.12';
 self.addEventListener('install', e => {
   self.skipWaiting();
 });
@@ -105,6 +105,24 @@ body.fs-xl #content, body.fs-xl #bottom-nav { zoom: 1.33; }
 
 .view{padding-bottom:24px;animation:fadeSlide .18s ease}
 @keyframes fadeSlide{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes overlayFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes overlayCardIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+@keyframes bottomSheetIn{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.dlg-center{animation:overlayFadeIn .15s ease}
+.dlg-center > div:first-child{animation:overlayCardIn .2s ease}
+.dlg-sheet{animation:overlayFadeIn .15s ease}
+.dlg-sheet > div:first-child{animation:bottomSheetIn .25s cubic-bezier(0.4,0,0.2,1)}
+.btn:active{transform:scale(.97)}
+.shop-item{transition:transform .1s}
+.shop-item:active{transform:scale(.99)}
+.fs-btn:active{transform:scale(.97)}
+.cat-tab:active{transform:scale(.95)}
+@media (prefers-reduced-motion: reduce){
+  .view{animation:none}
+  .dlg-center,.dlg-sheet{animation:none}
+  .dlg-center > div:first-child,.dlg-sheet > div:first-child{animation:none}
+  #toast{transition:opacity .01s}
+}
 
 .card{background:var(--card);border-radius:16px;padding:16px;margin:0 16px 12px;box-shadow:0 2px 8px rgba(26,171,151,.07)}
 
@@ -175,7 +193,7 @@ textarea.fi{resize:none}
 
 .fav-chips{display:flex;flex-wrap:wrap;gap:7px;padding:0 16px 10px}
 .fav-chip{padding:6px 13px;border-radius:20px;background:var(--card);border:1.5px solid var(--border);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
-.fav-chip:active{background:var(--primary-light);border-color:var(--primary);color:var(--primary)}
+.fav-chip:active{background:var(--primary-light);border-color:var(--primary);color:var(--primary);transform:scale(.95)}
 .date-wheel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-end;justify-content:center}
 .date-wheel-box{background:#fff;border-radius:20px 20px 0 0;padding:0;width:100%;max-width:480px}
 .date-wheel-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border)}
@@ -240,9 +258,18 @@ textarea.fi{resize:none}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = '1.7.11';
+const APP_VERSION = '1.7.12';
 
 const UPDATE_LOGS = {
+  '1.7.12': {
+    date: '2026.04.24',
+    items: [
+      'UI 부드럽게 개선',
+      '팝업이 자연스럽게 나타나도록 애니메이션 추가',
+      '버튼을 눌렀을 때 반응 피드백 개선',
+      'OS 동작 줄이기 설정 지원 (접근성)'
+    ]
+  },
   '1.7.11': {
     date: '2026.04.24',
     items: [
@@ -428,6 +455,7 @@ function showExitOverlay() {
   </div>`;
   overlay.onclick = () => _closeOverlay('exit-overlay');
   document.body.appendChild(overlay);
+  overlay.classList.add('dlg-center');
   _openOverlay('exit-overlay');
 }
 
@@ -475,6 +503,7 @@ function showUpdateOverlay() {
   </div>`;
   overlay.onclick = () => _closeOverlay('update-overlay');
   document.body.appendChild(overlay);
+  overlay.classList.add('dlg-center');
   _openOverlay('update-overlay');
 }
 
@@ -745,6 +774,7 @@ async function markConsumed(id) {
   </div>`;
   overlay.onclick = () => _closeOverlay('consumed-overlay');
   document.body.appendChild(overlay);
+  overlay.classList.add('dlg-center');
   _openOverlay('consumed-overlay');
 }
 async function addConsumedToShop(name) {
@@ -769,6 +799,7 @@ async function deleteItem(id) {
   </div>`;
   overlay.onclick = () => _closeOverlay('delete-overlay');
   document.body.appendChild(overlay);
+  overlay.classList.add('dlg-center');
   _openOverlay('delete-overlay');
   overlay.querySelector('#confirm-del').onclick = async () => {
     _closeOverlay('delete-overlay');
@@ -991,6 +1022,7 @@ function showPickerOverlay(title, items, btnLabel) {
   </div>`;
   overlay.onclick = () => _closeOverlay('picker-overlay');
   document.body.appendChild(overlay);
+  overlay.classList.add('dlg-sheet');
   _openOverlay('picker-overlay');
   window._pickerItems = items;
   window._pickerSelected = selected;
@@ -1372,6 +1404,7 @@ function openDateWheel(currentVal, cb) {
   ov.id = 'dwo';
   ov.onclick = () => _closeOverlay('dwo');
   document.body.appendChild(ov);
+  ov.classList.add('dlg-sheet');
   _openOverlay('dwo');
 
   window._dwY = selY; window._dwM = selM; window._dwD = selD;
@@ -1440,8 +1473,9 @@ function promptAddCat() {
   </div>`;
   overlay.onclick = () => _closeOverlay('cat-overlay');
   document.body.appendChild(overlay);
+  overlay.classList.add('dlg-center');
   _openOverlay('cat-overlay');
-  setTimeout(()=>document.getElementById('new-cat-input')?.focus(), 100);
+  setTimeout(()=>document.getElementById('new-cat-input')?.focus(), 220);
 }
 
 function confirmAddCat() {
@@ -1507,6 +1541,7 @@ function importData() {
     </div>`;
     overlay.onclick = () => _closeOverlay('import-overlay');
     document.body.appendChild(overlay);
+    overlay.classList.add('dlg-center');
     _openOverlay('import-overlay');
     window._importData = data;
   };
