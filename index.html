@@ -13,7 +13,6 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.png">
 <script>
-// ── PWA 설치 프롬프트 캐치 ──
 let _deferredInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
@@ -21,7 +20,7 @@ window.addEventListener('beforeinstallprompt', e => {
 });
 if ('serviceWorker' in navigator) {
   const swCode = `
-const CACHE = 'salimtong-v1.4.0';
+const CACHE = 'salimtong-v1.7.11';
 self.addEventListener('install', e => {
   self.skipWaiting();
 });
@@ -29,13 +28,16 @@ self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
 });
 self.addEventListener('fetch', e => {
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
-    if (e.request.url.startsWith('http')) {
-      const clone = res.clone();
-      caches.open(CACHE).then(c => c.put(e.request, clone));
-    }
-    return res;
-  }).catch(() => caches.match(e.request))));
+  if (!e.request.url.startsWith('http')) return;
+  e.respondWith(
+    fetch(e.request)
+      .then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return res;
+      })
+      .catch(() => caches.match(e.request))
+  );
 });
   `;
   const swBlob = new Blob([swCode], {type:'application/javascript'});
@@ -51,19 +53,24 @@ self.addEventListener('fetch', e => {
   --red:#e63946;--orange:#ff9f1c;--yellow:#e67700;
   --text:#2d3436;--sub:#636e72;--bg:#f0faf9;--card:#fff;--border:#dff0ee;
   --cold:#4dabf7;--frozen:#845ef7;--room:#fd7e14;--other:#868e96;
+  --success-bg:#e6fcf5;--success-text:#087f5b;
 }
-/* 테마: 로즈핑크 */
 body.theme-rosepink{--primary:#e91e8c;--primary-light:#fce4f3;--primary-dark:#c2185b;--bg:#fdf0f8;--border:#f8bde8}
-/* 테마: 피치 */
 body.theme-peach{--primary:#ff6b6b;--primary-light:#fff0f0;--primary-dark:#e05555;--bg:#fff5f5;--border:#ffd5d5}
-/* 테마: 라벤더 */
 body.theme-lavender{--primary:#9575cd;--primary-light:#f3eeff;--primary-dark:#7b5ba6;--bg:#f5f0ff;--border:#e1d5f5}
-/* 테마: 스카이블루 */
 body.theme-skyblue{--primary:#42a5f5;--primary-light:#e8f4fe;--primary-dark:#1e88e5;--bg:#f0f8ff;--border:#c8e6fc}
-/* 테마: 옐로우 */
 body.theme-yellow{--primary:#f59e0b;--primary-light:#fffbeb;--primary-dark:#d97706;--bg:#fffdf0;--border:#fde68a}
-/* 테마: 베이비핑크 */
 body.theme-babypink{--primary:#f48fb1;--primary-light:#fff0f5;--primary-dark:#e06090;--bg:#fff5f8;--border:#fad4e5}
+body.dark{--primary:#2dd4bf;--primary-light:#1a3a36;--primary-dark:#1aab97;--red:#ff6b7a;--orange:#ffb866;--yellow:#f0b848;--text:#e8e8e8;--sub:#a8a8a8;--bg:#121418;--card:#1e2128;--border:#2a2f38;--other:#a0a8b0;--success-bg:#1a3a36;--success-text:#5cc9a8}
+body.dark .dd-red{background:#3a1f22;color:#ff6b7a}
+body.dark .dd-orange{background:#3a2a1a;color:#ffb866}
+body.dark .dd-yellow{background:#3a3420;color:#f0b848}
+body.dark .ab-red{background:#3a1f22}
+body.dark .ab-orange{background:#3a2a1a}
+body.dark .memo-box{background:#3a3420;border-left-color:#b89838;color:var(--text)}
+body.dark .date-wheel-box{background:var(--card)}
+body.dark .date-wheel-mask{background:linear-gradient(to bottom,rgba(30,33,40,.92) 0%,transparent 35%,transparent 65%,rgba(30,33,40,.92) 100%)}
+body.dark #toast{background:#3a3f48;color:#f0f0f0}
 html,body{height:100%;overflow:hidden}
 input, textarea, select { -webkit-user-select:text; user-select:text; }
 body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text)}
@@ -76,7 +83,6 @@ body.fs-xl #content, body.fs-xl #bottom-nav { zoom: 1.33; }
 .fs-btn.active{border-color:var(--primary);background:var(--primary-light);color:var(--primary)}
 #app{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto;background:var(--bg);position:relative;overflow:hidden}
 
-/* Header */
 #header{
   background:linear-gradient(120deg,#138a79 0%,#1aab97 55%,#26c9b2 100%);
   padding:18px 16px 16px;border-bottom:none;
@@ -90,28 +96,22 @@ body.fs-xl #content, body.fs-xl #bottom-nav { zoom: 1.33; }
 #header-action{font-size:13px;font-weight:700;color:#fff;cursor:pointer;padding:6px 12px;border-radius:20px;background:rgba(255,255,255,.2);z-index:1;white-space:nowrap;font-family:'Noto Sans KR',sans-serif}
 #header-action:empty{display:none}
 
-/* Content */
 #content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 
-/* Bottom Nav */
 #bottom-nav{background:var(--card);border-top:1px solid var(--border);display:flex;padding:6px 0 calc(6px + env(safe-area-inset-bottom));flex-shrink:0}
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 0;color:var(--sub);font-size:12px;font-weight:500;transition:color .15s;font-family:'Jua',sans-serif}
 .nav-item.active{color:var(--primary)}
 .nav-icon{font-size:22px;line-height:1}
 
-/* View */
 .view{padding-bottom:24px;animation:fadeSlide .18s ease}
 @keyframes fadeSlide{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
-/* Cards */
 .card{background:var(--card);border-radius:16px;padding:16px;margin:0 16px 12px;box-shadow:0 2px 8px rgba(26,171,151,.07)}
 
-/* Section Header */
 .sec-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 6px}
 .sec-title{font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px}
 .sec-action{font-size:13px;color:var(--primary);cursor:pointer}
 
-/* Item Card */
 .item-card{background:var(--card);border-radius:14px;padding:13px 16px 13px 20px;margin:0 16px 8px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);cursor:pointer;transition:transform .1s;position:relative;overflow:hidden}
 .item-card:active{transform:scale(.98)}
 .cat-bar{position:absolute;left:0;top:0;bottom:0;width:4px}
@@ -121,19 +121,16 @@ body.fs-xl #content, body.fs-xl #bottom-nav { zoom: 1.33; }
 .dd-red{background:#ffe0e3;color:var(--red)}
 .dd-orange{background:#fff4e6;color:var(--orange)}
 .dd-yellow{background:#fff9db;color:var(--yellow)}
-.dd-green{background:#e6fcf5;color:#087f5b}
+.dd-green{background:var(--success-bg);color:var(--success-text)}
 
-/* Cat Badge */
 .cat-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;color:#fff}
 .bc-cold{background:var(--cold)}.bc-frozen{background:var(--frozen)}.bc-room{background:var(--room)}.bc-other{background:var(--other)}
 
-/* Cat Filter */
 .cat-filter{display:flex;gap:8px;padding:0 16px 10px;overflow-x:auto;scrollbar-width:none}
 .cat-filter::-webkit-scrollbar{display:none}
 .cat-tab{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:var(--card);color:var(--sub);border:1.5px solid var(--border);cursor:pointer;white-space:nowrap;transition:all .15s}
 .cat-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 
-/* Forms */
 .fg{margin:0 16px 14px}
 .fl{font-size:13px;font-weight:600;color:var(--sub);margin-bottom:5px;display:block}
 .fi{width:100%;padding:11px 13px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;font-size:15px;font-family:inherit;color:var(--text);outline:none;transition:border-color .15s}
@@ -143,51 +140,42 @@ textarea.fi{resize:none}
 .form-row{display:flex;gap:10px;margin:0 16px 14px}
 .form-row .fg{margin:0;flex:1}
 
-/* Buttons */
 .btn{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;padding:13px;border-radius:13px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;border:none;transition:all .15s;width:100%}
 .btn-p{background:var(--primary);color:#fff}.btn-p:active{background:var(--primary-dark)}
 .btn-s{background:var(--primary-light);color:var(--primary)}
 .btn-d{background:#ffe0e3;color:var(--red)}
 .btn-o{background:var(--card);color:var(--text);border:1.5px solid var(--border)}
 
-/* FAB */
 #fab{position:fixed;bottom:calc(76px + env(safe-area-inset-bottom));right:20px;width:54px;height:54px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 4px 16px rgba(26,171,151,.4);cursor:pointer;border:none;z-index:50;transition:transform .15s}
 #fab:active{transform:scale(.92)}
 
-/* Empty */
 .empty{display:flex;flex-direction:column;align-items:center;padding:60px 20px;gap:10px;color:var(--sub)}
 .empty-icon{font-size:56px}
 .empty-text{font-size:15px;font-weight:500}
 .empty-sub{font-size:13px;text-align:center;line-height:1.6}
 
-/* Alert Banner */
 .alert-banner{margin:10px 16px;padding:14px 16px;border-radius:14px;display:flex;align-items:center;gap:12px;cursor:pointer}
 .ab-red{background:#ffe0e3}.ab-orange{background:#fff4e6}.ab-green{background:var(--primary-light)}
 .ab-icon{font-size:22px}.ab-info{flex:1}.ab-title{font-size:14px;font-weight:600}.ab-sub{font-size:12px;color:var(--sub);margin-top:2px}
 .ab-count{font-size:22px;font-weight:700}
 .ab-red .ab-count{color:var(--red)}.ab-orange .ab-count{color:var(--orange)}
 
-/* Stats Grid */
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 12px}
 .stat-card{background:var(--card);border-radius:14px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .stat-val{font-size:24px;font-weight:700;color:var(--primary)}
 .stat-lbl{font-size:12px;color:var(--sub);margin-top:3px}
 
-/* Toggle */
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
 .toggle{width:48px;height:27px;border-radius:14px;background:var(--border);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
 .toggle.on{background:var(--primary)}
 .toggle::after{content:'';position:absolute;width:21px;height:21px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .toggle.on::after{transform:translateX(21px)}
 
-/* Divider */
 .dvd{height:1px;background:var(--border);margin:4px 0}
 
-/* Fav chips */
 .fav-chips{display:flex;flex-wrap:wrap;gap:7px;padding:0 16px 10px}
 .fav-chip{padding:6px 13px;border-radius:20px;background:var(--card);border:1.5px solid var(--border);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
 .fav-chip:active{background:var(--primary-light);border-color:var(--primary);color:var(--primary)}
-/* ── 날짜 휠 피커 ── */
 .date-wheel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-end;justify-content:center}
 .date-wheel-box{background:#fff;border-radius:20px 20px 0 0;padding:0;width:100%;max-width:480px}
 .date-wheel-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border)}
@@ -199,7 +187,6 @@ textarea.fi{resize:none}
 .date-wheel-mask{position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,rgba(255,255,255,.92) 0%,transparent 35%,transparent 65%,rgba(255,255,255,.92) 100%)}
 .date-wheel-line{position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:44px;border-top:1.5px solid var(--border);border-bottom:1.5px solid var(--border);pointer-events:none;z-index:1}
 
-/* Settings */
 .set-list{padding:0 16px}
 .set-item{display:flex;align-items:center;padding:14px 0;gap:12px;border-bottom:1px solid var(--border);cursor:pointer}
 .set-item:last-child{border:none}
@@ -207,38 +194,30 @@ textarea.fi{resize:none}
 .set-info{flex:1}.set-title{font-size:15px;font-weight:500}.set-sub{font-size:13px;color:var(--sub);margin-top:2px}
 .set-arrow{color:var(--sub);font-size:18px}
 
-/* Shopping */
 .shop-item{background:var(--card);border-radius:14px;padding:13px 14px;margin:0 16px 8px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .s-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s;font-size:13px;font-weight:700}
 .s-check.on{background:var(--primary);border-color:var(--primary);color:#fff}
 
-/* Memo */
 .memo-box{background:#fffbe6;border-radius:10px;padding:11px 13px;font-size:14px;color:var(--text);line-height:1.6;border-left:3px solid #ffd43b}
 
-/* Barcode */
 #barcode-wrap{margin:0 16px;border-radius:14px;overflow:hidden;background:#000;position:relative;display:none}
 
-/* Progress */
 .prog{background:var(--border);border-radius:4px;height:6px;overflow:hidden;margin-top:4px}
 .prog-fill{background:var(--primary);height:100%;border-radius:4px;transition:width .4s ease}
 
-/* Toast */
 #toast{position:fixed;bottom:calc(86px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(16px);background:#2d3436;color:#fff;padding:9px 20px;border-radius:20px;font-size:14px;font-weight:500;opacity:0;pointer-events:none;transition:all .25s;z-index:1000;white-space:nowrap;max-width:90vw;text-align:center}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* Greeting */
 .greet{padding:18px 20px 6px}
 .greet-date{font-size:13px;color:var(--sub)}
 .greet-title{font-size:22px;font-weight:700;margin-top:3px}
 
-/* Quick Grid */
 .quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 20px}
 .quick-card{background:var(--card);border-radius:14px;padding:18px 12px;text-align:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.05);transition:transform .1s}
 .quick-card:active{transform:scale(.97)}
 .quick-icon{font-size:30px;margin-bottom:7px}
 .quick-label{font-size:14px;font-weight:600}
 
-/* Scan button */
 #scan-result{font-size:13px;color:var(--sub);margin-top:8px;min-height:20px;padding:0 16px}
 </style>
 </head>
@@ -261,9 +240,111 @@ textarea.fi{resize:none}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.7.11';
 
-/* ========== DB ========== */
+const UPDATE_LOGS = {
+  '1.7.11': {
+    date: '2026.04.24',
+    items: [
+      '다크모드 자동 전환 추가',
+      '설정에서 자동을 선택하면 저녁 6시 ~ 아침 6시 자동으로 다크모드',
+      '상단 상태바 색상이 화면 모드에 맞춰 자동 변경'
+    ]
+  },
+  '1.7.10': {
+    date: '2026.04.24',
+    items: [
+      '다크모드 추가',
+      '설정 화면에서 라이트/다크 모드 선택 가능',
+      '밤에 사용해도 눈이 편안하도록 어두운 테마 지원'
+    ]
+  },
+  '1.7.9': {
+    date: '2026.04.24',
+    items: [
+      '사용 가이드 추가',
+      '공지 페이지에서 살림통 사용 방법 확인 가능'
+    ]
+  },
+  '1.7.8': {
+    date: '2026.04.24',
+    items: [
+      '공지 페이지 추가',
+      '메인 화면 좌측 공지 버튼으로 업데이트 내역 다시 보기',
+      '새 업데이트가 있으면 공지 버튼에 빨간 점 표시'
+    ]
+  },
+  '1.7.7': {
+    date: '2026.04.24',
+    items: [
+      '업데이트 내역 알림 기능 추가',
+      '메인 화면에서 새 버전 변경 사항을 자동으로 알려줍니다'
+    ]
+  },
+  '1.7.6': {
+    date: '2026.04.24',
+    items: [
+      '뒤로가기 동작 개선',
+      '팝업이 떠 있을 때 뒤로가기 누르면 팝업이 먼저 닫힘',
+      '다른 탭으로 이동하면 열려있던 팝업 자동 정리',
+      '삭제 확인 창 배경 클릭으로 닫히지 않던 문제 수정'
+    ]
+  },
+  '1.7.5': {
+    date: '2026.04.24',
+    items: [
+      '앱 종료 확인 팝업 추가',
+      '홈 화면에서 뒤로가기 누르면 종료 확인 팝업 표시'
+    ]
+  },
+  '1.7.4': {
+    date: '2026.04.24',
+    items: [
+      '보안 강화 (사용자 입력 안전 처리)'
+    ]
+  },
+  '1.7.3': {
+    date: '2026.04.24',
+    items: [
+      '보안 강화 (XSS 방어)',
+      '카드명, API 키 입력 처리 개선'
+    ]
+  },
+  '1.7.2': {
+    date: '2026.04.24',
+    items: [
+      '코드 정리 (주석 제거)',
+      '내부 안정성 개선'
+    ]
+  },
+  '1.7.1': {
+    date: '2026.04.24',
+    items: [
+      '서비스워커 전략 변경 (앞으로 업데이트가 빠르게 반영됩니다)'
+    ]
+  }
+};
+
+function _compareVersion(a, b) {
+  const pa = String(a).split('.').map(Number);
+  const pb = String(b).split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const da = pa[i] || 0;
+    const db = pb[i] || 0;
+    if (da !== db) return da - db;
+  }
+  return 0;
+}
+
+function _hasUnreadNotice() {
+  const lastRead = localStorage.getItem('lastNoticeRead');
+  if (lastRead === null) {
+    localStorage.setItem('lastNoticeRead', APP_VERSION);
+    return false;
+  }
+  return _compareVersion(APP_VERSION, lastRead) > 0;
+}
+
 let db;
 function initDB() {
   return new Promise((res, rej) => {
@@ -288,8 +369,7 @@ const dbAdd = (s, d) => new Promise((res, rej) => { const r = db.transaction(s,'
 const dbPut = (s, d) => new Promise((res, rej) => { const r = db.transaction(s,'readwrite').objectStore(s).put(d); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
 const dbDel = (s, id) => new Promise((res, rej) => { const r = db.transaction(s,'readwrite').objectStore(s).delete(id); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error); });
 
-/* ========== SETTINGS / FAVORITES ========== */
-const getSettings = () => { try { return { notificationEnabled:true, notificationTime:'09:00', apiKey:'', lastNotiDate:'', fontSize:'md', cardName:'', cardPayDay:15, cardStartDay:2, lastPayMethod:'card', theme:'mint', ...JSON.parse(localStorage.getItem('salimCfg')||'{}') }; } catch { return { notificationEnabled:true, notificationTime:'09:00', apiKey:'', lastNotiDate:'', fontSize:'md', cardName:'', cardPayDay:15, cardStartDay:2, lastPayMethod:'card', theme:'mint' }; } };
+const getSettings = () => { try { return { notificationEnabled:true, notificationTime:'09:00', apiKey:'', lastNotiDate:'', fontSize:'md', cardName:'', cardPayDay:15, cardStartDay:2, lastPayMethod:'card', theme:'mint', themeMode:'light', ...JSON.parse(localStorage.getItem('salimCfg')||'{}') }; } catch { return { notificationEnabled:true, notificationTime:'09:00', apiKey:'', lastNotiDate:'', fontSize:'md', cardName:'', cardPayDay:15, cardStartDay:2, lastPayMethod:'card', theme:'mint', themeMode:'light' }; } };
 const saveSettings = s => localStorage.setItem('salimCfg', JSON.stringify(s));
 const getFavs = () => { try { return JSON.parse(localStorage.getItem('salimFavs')||'[]'); } catch { return []; } };
 const saveFavs = f => localStorage.setItem('salimFavs', JSON.stringify(f));
@@ -303,7 +383,6 @@ const getAllCats = () => [...BASE_CATS, ...getCustomCats()];
 function addCustomCat(name) { const c=getCustomCats(); if(!c.includes(name)&&!BASE_CATS.includes(name)) { c.push(name); saveCustomCats(c); } }
 function removeCustomCat(name) { saveCustomCats(getCustomCats().filter(c=>c!==name)); }
 
-/* ========== ROUTER ========== */
 let curTab = 'home';
 const stacks = { home:['home'], stock:['stock'], shopping:['shopping'], stats:['stats'], settings:['settings'] };
 const params = {};
@@ -322,21 +401,91 @@ function navigate(view, p={}) {
 function goBack() {
   stopBarcode();
   if (stacks[curTab].length > 1) {
-    // 자식 뷰 → 부모 탭으로
     stacks[curTab].pop();
     renderView(curView());
   } else if (curTab !== 'home') {
-    // 탭 루트 → 홈으로
     switchTab('home');
   } else {
-    // 홈 → 앱 종료
-    if (typeof Android !== 'undefined') { Android.exitApp?.(); }
-    else { history.back(); }
+    showExitOverlay();
   }
+}
+
+function showExitOverlay() {
+  if (document.getElementById('exit-overlay')) return;
+  const blockers = ['picker-overlay','consumed-overlay','cat-overlay','import-overlay','dwo','update-overlay','delete-overlay'];
+  if (blockers.some(id => document.getElementById(id))) return;
+  const isNative = (typeof Android !== 'undefined') || (window.Capacitor?.isNativePlatform?.() === true);
+  const overlay = document.createElement('div');
+  overlay.id = 'exit-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `<div style="background:var(--card);color:var(--text);border-radius:20px;padding:24px 20px;margin:0 24px;width:100%;max-width:320px;text-align:center" onclick="event.stopPropagation()">
+    <div style="font-size:17px;font-weight:700;margin-bottom:6px">살림통을 종료할까요?</div>
+    <div id="exit-ad-area" style="min-height:0;margin:12px 0"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="_closeOverlay('exit-overlay')" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">취소</button>
+      ${isNative ? `<button onclick="confirmExit()" style="flex:1;padding:12px;border-radius:12px;border:none;background:var(--primary);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">종료</button>` : ''}
+    </div>
+  </div>`;
+  overlay.onclick = () => _closeOverlay('exit-overlay');
+  document.body.appendChild(overlay);
+  _openOverlay('exit-overlay');
+}
+
+function confirmExit() {
+  _closeOverlay('exit-overlay');
+  if (typeof Android !== 'undefined' && Android.exitApp) { Android.exitApp(); return; }
+  window.Capacitor?.Plugins?.App?.exitApp?.();
+}
+
+function showUpdateOverlay() {
+  if (document.getElementById('update-overlay')) return;
+  const lastSeen = localStorage.getItem('lastSeenVersion');
+  if (lastSeen === null) {
+    localStorage.setItem('lastSeenVersion', APP_VERSION);
+    return;
+  }
+  const newer = Object.keys(UPDATE_LOGS)
+    .filter(v => _compareVersion(v, lastSeen) > 0)
+    .sort((a, b) => _compareVersion(b, a));
+  if (newer.length === 0) return;
+  const blocks = newer.map(v => {
+    const log = UPDATE_LOGS[v];
+    const items = (log.items||[]).map(it => `<li style="margin:4px 0;line-height:1.6">${_esc(it)}</li>`).join('');
+    return `<div style="margin-bottom:16px">
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px">
+        <span style="font-size:16px;font-weight:700;color:var(--primary)">v${_esc(v)}</span>
+        <span style="font-size:12px;color:var(--sub)">${_esc(log.date||'')}</span>
+      </div>
+      <ul style="list-style:none;padding:0;margin:0;font-size:14px;color:var(--text)">${items}</ul>
+    </div>`;
+  }).join('');
+  const overlay = document.createElement('div');
+  overlay.id = 'update-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `<div style="background:var(--card);color:var(--text);border-radius:20px;padding:20px;margin:0 20px;width:100%;max-width:360px;max-height:70vh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:17px;font-weight:700">🎉 새로운 업데이트</div>
+      <span onclick="_closeOverlay('update-overlay')" style="cursor:pointer;font-size:20px;color:var(--sub);padding:0 4px">✕</span>
+    </div>
+    <div style="overflow-y:auto;flex:1;margin-bottom:14px">${blocks}</div>
+    <div style="display:flex;gap:10px">
+      <button onclick="_dismissUpdateOverlay()" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);font-size:14px;font-weight:600;color:var(--sub);cursor:pointer;font-family:inherit">다시 보지 않기</button>
+      <button onclick="_closeOverlay('update-overlay')" style="flex:1;padding:12px;border-radius:12px;border:none;background:var(--primary);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">닫기</button>
+    </div>
+  </div>`;
+  overlay.onclick = () => _closeOverlay('update-overlay');
+  document.body.appendChild(overlay);
+  _openOverlay('update-overlay');
+}
+
+function _dismissUpdateOverlay() {
+  localStorage.setItem('lastSeenVersion', APP_VERSION);
+  _closeOverlay('update-overlay');
 }
 
 function switchTab(tab) {
   stopBarcode();
+  OVERLAY_IDS.forEach(id => { if (document.getElementById(id)) _closeOverlay(id); });
   curTab = tab;
   stacks[tab] = [tab];
   document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.tab===tab));
@@ -353,10 +502,12 @@ function renderView(view) {
   el('header-action').style.position = '';
   el('header-action').style.right = '';
   document.getElementById('ver-badge')?.remove();
+  document.getElementById('notice-btn')?.remove();
   el('content').scrollTop = 0;
   removeFab();
   switch(view) {
-    case 'home':           el('header-title').innerHTML='살림통'; document.getElementById('header').insertAdjacentHTML('beforeend','<span id="ver-badge" style="position:absolute;right:12px;bottom:8px;font-size:11px;font-weight:600;color:rgba(255,255,255,.85);font-family:\'Noto Sans KR\',sans-serif;background:rgba(0,0,0,.15);padding:2px 7px;border-radius:8px;z-index:2">v'+APP_VERSION+'</span>'); renderHome(); break;
+    case 'home':           el('header-title').innerHTML='살림통'; document.getElementById('header').insertAdjacentHTML('beforeend','<span id="ver-badge" style="position:absolute;right:12px;bottom:8px;font-size:11px;font-weight:600;color:rgba(255,255,255,.85);font-family:\'Noto Sans KR\',sans-serif;background:rgba(0,0,0,.15);padding:2px 7px;border-radius:8px;z-index:2">v'+APP_VERSION+'</span>'); document.getElementById('header').insertAdjacentHTML('beforeend','<button id="notice-btn" onclick="navigate(\'notice\')" style="position:absolute;left:12px;bottom:8px;background:rgba(0,0,0,.18);border:none;color:#fff;padding:6px 12px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:\'Noto Sans KR\',sans-serif;z-index:2;display:flex;align-items:center;gap:4px;min-height:28px"><span style="font-size:13px">🔔</span><span>공지</span>'+(_hasUnreadNotice()?'<span style="position:absolute;top:-3px;right:-3px;width:9px;height:9px;background:#ef4444;border-radius:50%;border:1.5px solid #1aab97"></span>':'')+'</button>'); renderHome(); break;
+    case 'notice':         el('header-title').textContent='공지'; renderNotice(); break;
     case 'stock':          el('header-title').textContent='재고'; renderStock(); break;
     case 'stock-add':      el('header-title').textContent=p.edit?'품목 수정':'품목 추가'; renderStockAdd(p); break;
     case 'stock-detail':   el('header-title').textContent='품목 상세'; renderStockDetail(p.id||_detailId); break;
@@ -369,7 +520,6 @@ function renderView(view) {
   }
 }
 
-/* ========== HELPERS ========== */
 const todayStr = () => new Date().toISOString().split('T')[0];
 function getDDay(exp) {
   if (!exp) return null;
@@ -399,7 +549,6 @@ function ddBadge(d) {
   if (d<=7) return `<span class="dday-badge dd-yellow">D-${d}</span>`;
   return `<span class="dday-badge dd-green">D-${d}</span>`;
 }
-// 유통기한 있으면 D-day, 없으면 경과일
 function itemBadge(it) {
   if (it.expiryDate) return ddBadge(getDDay(it.expiryDate));
   return elapsedBadge(getElapsed(it.purchaseDate));
@@ -413,7 +562,6 @@ function korDate() { const d=new Date(); return `${d.getFullYear()}년 ${d.getMo
 function removeFab() { document.getElementById('fab')?.remove(); }
 function addFab(fn) { removeFab(); const b=document.createElement('button'); b.id='fab'; b.className=''; b.style.cssText='position:fixed;bottom:calc(76px + env(safe-area-inset-bottom));right:20px;width:54px;height:54px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 4px 16px rgba(26,171,151,.4);cursor:pointer;border:none;z-index:50;transition:transform .15s'; b.textContent='+'; b.onclick=fn; b.onmousedown=()=>b.style.transform='scale(.92)'; b.onmouseup=()=>b.style.transform=''; document.getElementById('app').appendChild(b); }
 
-/* ========== HOME ========== */
 async function renderHome() {
   const all = await dbAll('items');
   const active = all.filter(i=>!i.isConsumed);
@@ -446,7 +594,6 @@ async function renderHome() {
   </div>`;
 }
 
-/* ========== STOCK ========== */
 let stockFilter = '전체';
 async function renderStock() {
   const all = await dbAll('items');
@@ -463,9 +610,9 @@ async function renderStock() {
   const c = document.getElementById('content');
   c.innerHTML = `<div class="view">
     <div style="padding:10px 16px 4px"><input class="fi" id="stk-search" placeholder="🔍 검색..." oninput="stockSearch()" style="margin:0"></div>
-    <div class="cat-filter">${cats.map(ct=>`<div class="cat-tab ${stockFilter===ct?'active':''}" onclick="setStockFilter('${ct}')">${ct}</div>`).join('')}<div class="cat-tab" onclick="promptAddCat()" style="padding:6px 12px;font-size:16px;font-weight:700;color:var(--primary);border-color:var(--primary)">+</div></div>
+    <div class="cat-filter">${cats.map(ct=>`<div class="cat-tab ${stockFilter===ct?'active':''}" onclick="setStockFilter('${escQ(ct)}')">${_esc(ct)}</div>`).join('')}<div class="cat-tab" onclick="promptAddCat()" style="padding:6px 12px;font-size:16px;font-weight:700;color:var(--primary);border-color:var(--primary)">+</div></div>
     ${filtered.length===0 ? `<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">재고가 없어요</div><div class="empty-sub">+ 버튼으로 추가해보세요</div></div>` :
-      filtered.map(it=>`<div class="item-card" id="ic-${it.id}" onclick="_detailId=${it.id};navigate('stock-detail',{id:${it.id}})"><div class="cat-bar" style="background:${catColor(it.category)}"></div><div style="flex:1;min-width:0"><div class="item-name">${it.name}${it.isFavorite?' ⭐':''}</div><div class="item-sub"><span class="cat-badge ${catClass(it.category)}">${it.category}</span><span>${it.quantity}${it.unit||'개'}</span><span>${it.expiryDate?fmtDate(it.expiryDate):'구매 '+fmtDate(it.purchaseDate)}</span></div></div>${itemBadge(it)}</div>`).join('')}
+      filtered.map(it=>`<div class="item-card" id="ic-${it.id}" onclick="_detailId=${it.id};navigate('stock-detail',{id:${it.id}})"><div class="cat-bar" style="background:${catColor(it.category)}"></div><div style="flex:1;min-width:0"><div class="item-name">${_esc(it.name)}${it.isFavorite?' ⭐':''}</div><div class="item-sub"><span class="cat-badge ${catClass(it.category)}">${_esc(it.category)}</span><span>${it.quantity}${_esc(it.unit||'개')}</span><span>${it.expiryDate?fmtDate(it.expiryDate):'구매 '+fmtDate(it.purchaseDate)}</span></div></div>${itemBadge(it)}</div>`).join('')}
     <div style="height:80px"></div>
   </div>`;
   addFab(()=>navigate('stock-add',{}));
@@ -476,7 +623,6 @@ function stockSearch() { const q=(document.getElementById('stk-search')?.value||
 
 
 
-/* ========== STOCK ADD ========== */
 let _editItemData = null;
 async function renderStockAdd(p={}) {
   const isEdit = !!p.edit;
@@ -487,14 +633,14 @@ async function renderStockAdd(p={}) {
   const favs = getFavs();
   const c = document.getElementById('content');
   c.innerHTML = `<div class="view">
-    ${favs.length>0 ? `<div class="sec-header"><span class="sec-title">즐겨찾기</span></div><div class="fav-chips">${favs.map(f=>`<div class="fav-chip" onclick="fillFav('${escQ(f.name)}','${f.category}')">${f.name}</div>`).join('')}</div>` : ''}
+    ${favs.length>0 ? `<div class="sec-header"><span class="sec-title">즐겨찾기</span></div><div class="fav-chips">${favs.map(f=>`<div class="fav-chip" onclick="fillFav('${escQ(f.name)}','${escQ(f.category)}')">${_esc(f.name)}</div>`).join('')}</div>` : ''}
     <div class="sec-header"><span class="sec-title">바코드 스캔</span></div>
     <div style="padding:0 16px 10px"><button class="btn btn-o" id="scan-btn" onclick="toggleBarcode()" style="padding:11px">📷 바코드 스캔으로 자동 입력</button></div>
     <div id="barcode-wrap"></div>
     <div id="scan-result"></div>
     <div class="sec-header"><span class="sec-title">품목 정보</span></div>
     <div class="fg"><label class="fl">품목명 *</label><input class="fi" id="f-name" placeholder="예: 우유" value="${escA(item.name||'')}"></div>
-    <div class="fg"><label class="fl">카테고리</label><select class="fs" id="f-cat">${getAllCats().map(ct=>`<option ${(item.category||'냉장')===ct?'selected':''}>${ct}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">카테고리</label><select class="fs" id="f-cat">${getAllCats().map(ct=>`<option ${(item.category||'냉장')===ct?'selected':''}>${_esc(ct)}</option>`).join('')}</select></div>
     <div class="form-row">
       <div class="fg"><label class="fl">수량</label><input class="fi" id="f-qty" type="number" min="1" value="${item.quantity||1}"></div>
       <div class="fg"><label class="fl">단위</label><input class="fi" id="f-unit" placeholder="개" value="${escA(item.unit||'개')}"></div>
@@ -538,7 +684,6 @@ async function saveItem(editId) {
   if (editId) {
     await dbPut('items',{...it,id:editId});
     showToast('수정되었습니다');
-    // 수정 시 stock-add 팝하고 stock-detail로 명확히 이동
     stacks[curTab].pop();
     _detailId = editId;
     params['stock-detail'] = {id: editId};
@@ -550,7 +695,6 @@ async function saveItem(editId) {
   }
 }
 
-/* ========== STOCK DETAIL ========== */
 async function renderStockDetail(id) {
   if (!id) { goBack(); return; }
   _detailId = id;
@@ -564,17 +708,17 @@ async function renderStockDetail(id) {
         <div style="display:flex;align-items:center;gap:6px"><span class="cat-badge ${catClass(it.category)}">${it.category}</span>${it.isFavorite?'<span>⭐</span>':''}</div>
         ${itemBadge(it)}
       </div>
-      <div style="font-size:22px;font-weight:700;margin-bottom:14px">${it.name}</div>
+      <div style="font-size:22px;font-weight:700;margin-bottom:14px">${_esc(it.name)}</div>
       <div class="dvd"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
-        <div><div style="font-size:12px;color:var(--sub)">수량</div><div style="font-size:16px;font-weight:600">${it.quantity}${it.unit||'개'}</div></div>
+        <div><div style="font-size:12px;color:var(--sub)">수량</div><div style="font-size:16px;font-weight:600">${it.quantity}${_esc(it.unit||'개')}</div></div>
         <div><div style="font-size:12px;color:var(--sub)">가격</div><div style="font-size:16px;font-weight:600">${fmtKRW(it.price)}</div></div>
         <div><div style="font-size:12px;color:var(--sub)">구매일</div><div style="font-size:16px;font-weight:600">${fmtDate(it.purchaseDate)}</div></div>
         <div><div style="font-size:12px;color:var(--sub)">${it.expiryDate?'유통기한':'경과일'}</div><div style="font-size:16px;font-weight:600">${it.expiryDate?fmtDate(it.expiryDate):(elapsed!==null?elapsed+'일 경과':'-')}</div></div>
       </div>
-      ${it.memo ? `<div class="dvd" style="margin-top:12px"></div><div style="margin-top:10px"><div style="font-size:12px;color:var(--sub);margin-bottom:5px">메모</div><div class="memo-box">${it.memo}</div></div>` : ''}
+      ${it.memo ? `<div class="dvd" style="margin-top:12px"></div><div style="margin-top:10px"><div style="font-size:12px;color:var(--sub);margin-bottom:5px">메모</div><div class="memo-box">${_esc(it.memo)}</div></div>` : ''}
     </div>
-    ${it.isConsumed ? `<div class="card" style="background:#e6fcf5"><div style="color:#087f5b;font-weight:600">✅ 소비 완료 (${fmtDate(it.consumedDate)})</div></div>` :
+    ${it.isConsumed ? `<div class="card" style="background:var(--success-bg)"><div style="color:var(--success-text);font-weight:600">✅ 소비 완료 (${fmtDate(it.consumedDate)})</div></div>` :
     `<div style="padding:0 16px 10px"><button class="btn btn-s" onclick="markConsumed(${id})">✅ 소비 완료 처리</button></div>`}
     <div style="padding:0 16px 10px"><button class="btn btn-o" onclick="navigate('stock-add',{edit:true,id:${id}})">✏️ 수정</button></div>
     <div style="padding:0 16px"><button class="btn btn-d" onclick="deleteItem(${id})">🗑️ 삭제</button></div>
@@ -587,52 +731,53 @@ async function markConsumed(id) {
   await dbPut('items',it);
   showToast('소비 완료 처리되었습니다');
   renderStockDetail(id);
-  // 장보기 추가 여부 팝업
   const overlay = document.createElement('div');
   overlay.id = 'consumed-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center';
-  overlay.innerHTML = `<div style="background:#fff;border-radius:20px;padding:24px 20px;margin:0 24px;width:100%;max-width:320px;text-align:center" onclick="event.stopPropagation()">
+  overlay.innerHTML = `<div style="background:var(--card);color:var(--text);border-radius:20px;padding:24px 20px;margin:0 24px;width:100%;max-width:320px;text-align:center" onclick="event.stopPropagation()">
     <div style="font-size:26px;margin-bottom:8px">🛒</div>
-    <div style="font-size:16px;font-weight:700;margin-bottom:6px">"${it.name}"</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px">"${_esc(it.name)}"</div>
     <div style="font-size:14px;color:var(--sub);margin-bottom:18px">장보기 목록에 추가할까요?</div>
     <div style="display:flex;gap:10px">
-      <button onclick="document.getElementById('consumed-overlay').remove()" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">아니요</button>
+      <button onclick="_closeOverlay('consumed-overlay')" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">아니요</button>
       <button onclick="addConsumedToShop('${escQ(it.name)}')" style="flex:1;padding:12px;border-radius:12px;border:none;background:var(--primary);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">추가</button>
     </div>
   </div>`;
-  overlay.onclick = () => overlay.remove();
+  overlay.onclick = () => _closeOverlay('consumed-overlay');
   document.body.appendChild(overlay);
+  _openOverlay('consumed-overlay');
 }
 async function addConsumedToShop(name) {
-  document.getElementById('consumed-overlay')?.remove();
+  _closeOverlay('consumed-overlay');
   const all = await dbAll('shopping');
   if (all.find(i=>i.name===name&&!i.checked)) { showToast('이미 장보기에 있어요'); return; }
   await dbAdd('shopping', { name, checked:false, addedDate:todayStr() });
   showToast(`"${name}" 장보기에 추가됐어요`);
 }
 async function deleteItem(id) {
-  // confirm()은 iframe에서 막힘 → 커스텀 확인창 사용
   const overlay = document.createElement('div');
+  overlay.id = 'delete-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center';
-  overlay.innerHTML = `<div style="background:#fff;border-radius:20px;padding:24px 20px;margin:0 24px;text-align:center;width:100%;max-width:320px">
+  overlay.innerHTML = `<div style="background:var(--card);color:var(--text);border-radius:20px;padding:24px 20px;margin:0 24px;text-align:center;width:100%;max-width:320px" onclick="event.stopPropagation()">
     <div style="font-size:22px;margin-bottom:8px">🗑️</div>
     <div style="font-size:17px;font-weight:700;margin-bottom:6px">정말 삭제할까요?</div>
     <div style="font-size:13px;color:var(--sub);margin-bottom:20px">삭제하면 복구할 수 없어요</div>
     <div style="display:flex;gap:10px">
-      <button onclick="this.closest('div[style]').remove()" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-size:15px;font-weight:600;cursor:pointer">취소</button>
+      <button onclick="_closeOverlay('delete-overlay')" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:15px;font-weight:600;cursor:pointer">취소</button>
       <button id="confirm-del" style="flex:1;padding:12px;border-radius:12px;border:none;background:#ffeaea;color:#c62828;font-size:15px;font-weight:700;cursor:pointer">삭제</button>
     </div>
   </div>`;
+  overlay.onclick = () => _closeOverlay('delete-overlay');
   document.body.appendChild(overlay);
+  _openOverlay('delete-overlay');
   overlay.querySelector('#confirm-del').onclick = async () => {
-    overlay.remove();
+    _closeOverlay('delete-overlay');
     await dbDel('items', id);
     showToast('삭제되었습니다');
     goBack();
   };
 }
 
-/* ========== BARCODE ========== */
 let _scanner = null;
 let _scanning = false;
 
@@ -694,7 +839,6 @@ async function lookupBarcode(code) {
   if (r) r.textContent = '등록되지 않은 상품입니다. 직접 입력해주세요.';
 }
 
-/* ========== SHOPPING ========== */
 async function renderShopping() {
   const all = await dbAll('shopping');
   const unchecked = all.filter(i=>!i.checked);
@@ -713,7 +857,7 @@ async function renderShopping() {
       <button class="btn btn-s btn-sm" onclick="showFrequentItems()" style="flex:1;font-size:13px">🔄 자주 사는 것</button>
     </div>
     ${favs.length>0 ? `<div style="display:flex;gap:7px;padding:0 16px 10px;overflow-x:auto;scrollbar-width:none">
-      ${favs.map(f=>`<div class="fav-chip" onclick="quickAddFav('${escQ(f.name)}')" style="white-space:nowrap">${f.name}</div>`).join('')}
+      ${favs.map(f=>`<div class="fav-chip" onclick="quickAddFav('${escQ(f.name)}')" style="white-space:nowrap">${_esc(f.name)}</div>`).join('')}
     </div>` : ''}
     ${all.length>0 ? `<div style="display:flex;align-items:center;padding:6px 16px 10px;gap:8px;border-bottom:1px solid var(--border);margin-bottom:4px">
       <span style="flex:1;font-size:13px;color:var(--sub);font-weight:600">전체 ${all.length}개</span>
@@ -777,7 +921,7 @@ function shopItem(it) {
   return `<div class="shop-item" onclick="toggleCheck(${it.id})" style="cursor:pointer">
     <div class="s-check ${it.checked?'on':''}" id="chk-${it.id}">${it.checked?'✓':''}</div>
     <div style="flex:1;min-width:0">
-      <div style="font-weight:500;${it.checked?'text-decoration:line-through;color:var(--sub)':''}">${it.name}</div>
+      <div style="font-weight:500;${it.checked?'text-decoration:line-through;color:var(--sub)':''}">${_esc(it.name)}</div>
     </div>
     <span style="font-size:20px;padding:0 6px;color:var(--sub)" onclick="event.stopPropagation();delShop(${it.id})">✕</span>
   </div>`;
@@ -791,25 +935,22 @@ async function selectAllShop(checked) {
 
 async function toggleCheck(id) { const it=await dbGet('shopping',id); it.checked=!it.checked; await dbPut('shopping',it); renderShopping(); }
 
-/* ── 자동 장보기 추천 ── */
 async function showAutoRecommend() {
   const items = await dbAll('items');
   const shopAll = await dbAll('shopping');
   const shopNames = shopAll.map(i=>i.name);
   const recommend = items.filter(i=>{
     if (i.isConsumed) return false;
-    if (shopNames.includes(i.name)) return false; // 이미 장보기에 있으면 제외
+    if (shopNames.includes(i.name)) return false;
     const d = getDDay(i.expiryDate);
-    return d !== null && d <= 7; // D-7 이하
+    return d !== null && d <= 7;
   });
-  // 소비 완료 처리된 품목 중 장보기에 없는 것도 추가
   const consumed = items.filter(i => i.isConsumed && !shopNames.includes(i.name));
   const all = [...recommend, ...consumed.slice(0,5)];
   if (all.length === 0) { showToast('보충이 필요한 품목이 없어요'); return; }
   showPickerOverlay('🔔 보충 필요한 품목', all, '장보기에 추가');
 }
 
-/* ── 자주 사는 것 ── */
 async function showFrequentItems() {
   const items = await dbAll('items');
   const shopAll = await dbAll('shopping');
@@ -829,28 +970,28 @@ async function showFrequentItems() {
   showPickerOverlay('🔄 자주 사는 것', frequent, '장보기에 추가');
 }
 
-/* ── 선택 팝업 공통 ── */
 function showPickerOverlay(title, items, btnLabel) {
   const selected = new Set();
   const overlay = document.createElement('div');
   overlay.id = 'picker-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:flex-end;justify-content:center';
-  overlay.innerHTML = `<div style="background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:70vh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
+  overlay.innerHTML = `<div style="background:var(--card);color:var(--text);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:70vh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
     <div style="font-size:17px;font-weight:700;margin-bottom:14px">${title}</div>
     <div style="overflow-y:auto;flex:1;margin-bottom:14px">
       ${items.map((it,i)=>`<div id="pick-${i}" onclick="togglePick(${i},this)" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;margin-bottom:6px;border:1.5px solid var(--border);background:var(--card);cursor:pointer;transition:all .15s">
         <div style="width:22px;height:22px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0" id="pick-chk-${i}"></div>
-        <div style="flex:1"><div style="font-size:15px;font-weight:600">${it.name}</div><div style="font-size:12px;color:var(--sub)">${it.category||''}${it.expiryDate?' · '+fmtDate(it.expiryDate):''}</div></div>
+        <div style="flex:1"><div style="font-size:15px;font-weight:600">${_esc(it.name)}</div><div style="font-size:12px;color:var(--sub)">${_esc(it.category||'')}${it.expiryDate?' · '+fmtDate(it.expiryDate):''}</div></div>
         ${itemBadge(it)}
       </div>`).join('')}
     </div>
     <div style="display:flex;gap:10px">
-      <button onclick="document.getElementById('picker-overlay').remove()" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">닫기</button>
+      <button onclick="_closeOverlay('picker-overlay')" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">닫기</button>
       <button onclick="addPickedToShop()" style="flex:2;padding:12px;border-radius:12px;border:none;background:var(--primary);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">${btnLabel}</button>
     </div>
   </div>`;
-  overlay.onclick = () => overlay.remove();
+  overlay.onclick = () => _closeOverlay('picker-overlay');
   document.body.appendChild(overlay);
+  _openOverlay('picker-overlay');
   window._pickerItems = items;
   window._pickerSelected = selected;
 }
@@ -869,12 +1010,11 @@ async function addPickedToShop() {
     const it = items[i];
     await dbAdd('shopping', { name:it.name, checked:false, addedDate:todayStr() });
   }
-  document.getElementById('picker-overlay')?.remove();
+  _closeOverlay('picker-overlay');
   showToast(`${sel.size}개 추가됨`);
   renderShopping();
 }
 
-/* ── 장보기 공유 ── */
 async function shareShoppingList() {
   const all = await dbAll('shopping');
   const unchecked = all.filter(i=>!i.checked);
@@ -884,7 +1024,6 @@ async function shareShoppingList() {
     await navigator.clipboard.writeText(text);
     showToast('클립보드에 복사됐어요! 카톡에 붙여넣기 하세요 😊');
   } catch {
-    // fallback
     const ta = document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
     showToast('복사됐어요! 카톡에 붙여넣기 하세요 😊');
   }
@@ -899,17 +1038,14 @@ async function moveCheckedToStock() {
   navigate('stock-from-shopping', { items: checked, idx: 0 });
 }
 
-/* ========== STOCK FROM SHOPPING (C안 - 2단계) ========== */
 async function renderStockFromShopping(p={}) {
   const items = p.items || [];
   let idx = p.idx ?? 0;
-  const decisions = p.decisions || {}; // {id: true/false}
-  const phase = p.phase || 'decide'; // decide | register
+  const decisions = p.decisions || {};
+  const phase = p.phase || 'decide';
 
-  // ── 1단계: 예/아니요 결정 ──
   if (phase === 'decide') {
     if (idx >= items.length) {
-      // 모든 결정 완료 → 2단계로
       const toRegister = items.filter(it => decisions[it.id]);
       if (toRegister.length === 0) {
         const all = await dbAll('shopping');
@@ -926,7 +1062,7 @@ async function renderStockFromShopping(p={}) {
     const c = document.getElementById('content');
     c.innerHTML = `<div class="view">
       <div class="card" style="margin-top:16px;text-align:center;padding:24px 20px">
-        <div style="font-size:30px;font-weight:800;margin-bottom:6px">${it.name}</div>
+        <div style="font-size:30px;font-weight:800;margin-bottom:6px">${_esc(it.name)}</div>
         <div style="font-size:13px;color:var(--sub)">${idx+1} / ${items.length}번째 품목</div>
       </div>
       <div class="sec-header"><span class="sec-title">냉장고/식품 재고에 등록할까요?</span></div>
@@ -945,7 +1081,6 @@ async function renderStockFromShopping(p={}) {
     return;
   }
 
-  // ── 2단계: 등록 폼 ──
   const toRegister = items.filter(it => decisions[it.id]);
   if (idx >= toRegister.length) {
     const all = await dbAll('shopping');
@@ -959,7 +1094,7 @@ async function renderStockFromShopping(p={}) {
   const c = document.getElementById('content');
   c.innerHTML = `<div class="view">
     <div class="card" style="margin-top:16px;text-align:center;padding:20px">
-      <div style="font-size:28px;font-weight:800;margin-bottom:4px">${it.name}</div>
+      <div style="font-size:28px;font-weight:800;margin-bottom:4px">${_esc(it.name)}</div>
       <div style="font-size:13px;color:var(--sub)">${idx+1} / ${toRegister.length}개 등록</div>
     </div>
     <div class="sec-header"><span class="sec-title">품목 정보 입력</span></div>
@@ -969,7 +1104,7 @@ async function renderStockFromShopping(p={}) {
       <div id="scan-result" style="font-size:13px;color:var(--sub);min-height:18px;padding:2px 0 6px"></div>
     </div>
     <div class="fg" style="padding:0 16px"><label class="fl">품목명</label><input class="fi" id="f-name" value="${escA(it.name)}"></div>
-    <div class="fg" style="padding:0 16px"><label class="fl">카테고리</label><select class="fs" id="f-cat">${getAllCats().map(ct=>`<option>${ct}</option>`).join('')}</select></div>
+    <div class="fg" style="padding:0 16px"><label class="fl">카테고리</label><select class="fs" id="f-cat">${getAllCats().map(ct=>`<option>${_esc(ct)}</option>`).join('')}</select></div>
     <div style="padding:0 16px"><label class="fl">결제 수단</label>${payMethodHtml()}</div>
     <div class="form-row" style="padding:0 16px">
       <div class="fg"><label class="fl">가격 (원)</label><input class="fi" id="f-price" type="number" step="100" placeholder="0"></div>
@@ -1011,10 +1146,9 @@ async function saveAndNext(idx) {
   navigate('stock-from-shopping', { items:s.items, decisions:s.decisions, phase:'register', idx:idx+1, registered:(s.registered||0)+1 });
 }
 
-function showStockForm(idx) {}  // 호환성 유지
+function showStockForm(idx) {}
 function skipToNext(idx) { decideItem(false, idx); }
 
-/* ========== STATS ========== */
 async function renderStats() {
   const all = await dbAll('items');
   const s = getSettings();
@@ -1035,7 +1169,6 @@ async function renderStats() {
   const consumedMap={}, wastedMap={}, frequentMap={};
   consumed.forEach(i=>consumedMap[i.name]=(consumedMap[i.name]||0)+1);
   expired.forEach(i=>wastedMap[i.name]=(wastedMap[i.name]||0)+1);
-  // 최근 30일 자주 구매
   const cutoff30 = new Date(); cutoff30.setDate(cutoff30.getDate()-30);
   const cutStr30 = cutoff30.toISOString().split('T')[0];
   all.filter(i=>i.purchaseDate&&i.purchaseDate>=cutStr30).forEach(i=>frequentMap[i.name]=(frequentMap[i.name]||0)+1);
@@ -1046,7 +1179,7 @@ async function renderStats() {
   c.innerHTML = `<div class="view">
     <div class="sec-header"><span class="sec-title">💳 카드 정산 현황</span></div>
     <div class="card" style="margin-bottom:8px">
-      <div style="font-size:12px;color:var(--sub);margin-bottom:8px">${fmtPeriod(periodStart)} ~ ${fmtPeriod(periodEnd)} 이용분 · ${s.cardName||'카드'} 결제일 ${s.cardPayDay}일</div>
+      <div style="font-size:12px;color:var(--sub);margin-bottom:8px">${fmtPeriod(periodStart)} ~ ${fmtPeriod(periodEnd)} 이용분 · ${_esc(s.cardName||'카드')} 결제일 ${s.cardPayDay}일</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div><div style="font-size:13px;color:var(--sub)">💳 카드 지출</div><div style="font-size:22px;font-weight:800;color:var(--primary)">${fmtKRW(cardTotal)}</div></div>
         <div style="text-align:right"><div style="font-size:13px;color:var(--sub)">💵 현금 지출</div><div style="font-size:22px;font-weight:800;color:var(--orange)">${fmtKRW(cashTotal)}</div></div>
@@ -1060,26 +1193,101 @@ async function renderStats() {
     <div class="stat-grid">
       <div class="stat-card"><div class="stat-val">${periodItems.length}</div><div class="stat-lbl">구매 건수</div></div>
       <div class="stat-card"><div class="stat-val" style="font-size:18px">${(cardTotal+cashTotal)>0?((cardTotal+cashTotal)/10000).toFixed(1)+'만':'0원'}</div><div class="stat-lbl">총 지출</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:#087f5b">${consumed.length}</div><div class="stat-lbl">소비 완료</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--success-text)">${consumed.length}</div><div class="stat-lbl">소비 완료</div></div>
       <div class="stat-card"><div class="stat-val" style="color:var(--red)">${expired.length}</div><div class="stat-lbl">만료 품목</div></div>
     </div>
     <div class="sec-header"><span class="sec-title">카테고리별 재고</span></div>
     <div class="card">${catCnt.map(x=>`<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span class="cat-badge ${catClass(x.cat)}">${x.cat}</span><span style="font-size:13px;font-weight:600">${x.cnt}개</span></div><div class="prog"><div class="prog-fill" style="width:${x.cnt/maxCnt*100}%;background:${catColor(x.cat)}"></div></div></div>`).join('')}</div>
-    ${topConsumed.length>0 ? `<div class="sec-header"><span class="sec-title">자주 소비한 품목</span></div><div class="card">${topConsumed.map(([n,cnt],i)=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;${i<topConsumed.length-1?'border-bottom:1px solid var(--border)':''}"><span style="font-size:16px;font-weight:700;color:var(--primary);width:20px">${i+1}</span><span style="flex:1;font-size:15px">${n}</span><span style="font-size:14px;color:var(--sub)">${cnt}회</span></div>`).join('')}</div>` : ''}
-    ${topWasted.length>0 ? `<div class="sec-header"><span class="sec-title">자주 버린 품목 ⚠️</span></div><div class="card">${topWasted.map(([n,cnt],i)=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;${i<topWasted.length-1?'border-bottom:1px solid var(--border)':''}"><span style="font-size:16px;font-weight:700;color:var(--red);width:20px">${i+1}</span><span style="flex:1;font-size:15px">${n}</span><span style="font-size:14px;color:var(--red)">${cnt}개</span></div>`).join('')}</div>` : ''}
-    ${topFrequent.length>0 ? `<div class="sec-header"><span class="sec-title">최근 30일 자주 구매 🔄</span><span class="sec-action" onclick="switchTab('shopping');setTimeout(showFrequentItems,200)">장보기 추가 →</span></div><div class="card">${topFrequent.map(([n,cnt],i)=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;${i<topFrequent.length-1?'border-bottom:1px solid var(--border)':''}"><span style="font-size:16px;font-weight:700;color:var(--primary);width:20px">${i+1}</span><span style="flex:1;font-size:15px">${n}</span><span style="font-size:14px;color:var(--sub)">${cnt}회</span></div>`).join('')}</div>` : ''}
+    ${topConsumed.length>0 ? `<div class="sec-header"><span class="sec-title">자주 소비한 품목</span></div><div class="card">${topConsumed.map(([n,cnt],i)=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;${i<topConsumed.length-1?'border-bottom:1px solid var(--border)':''}"><span style="font-size:16px;font-weight:700;color:var(--primary);width:20px">${i+1}</span><span style="flex:1;font-size:15px">${_esc(n)}</span><span style="font-size:14px;color:var(--sub)">${cnt}회</span></div>`).join('')}</div>` : ''}
+    ${topWasted.length>0 ? `<div class="sec-header"><span class="sec-title">자주 버린 품목 ⚠️</span></div><div class="card">${topWasted.map(([n,cnt],i)=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;${i<topWasted.length-1?'border-bottom:1px solid var(--border)':''}"><span style="font-size:16px;font-weight:700;color:var(--red);width:20px">${i+1}</span><span style="flex:1;font-size:15px">${_esc(n)}</span><span style="font-size:14px;color:var(--red)">${cnt}개</span></div>`).join('')}</div>` : ''}
+    ${topFrequent.length>0 ? `<div class="sec-header"><span class="sec-title">최근 30일 자주 구매 🔄</span><span class="sec-action" onclick="switchTab('shopping');setTimeout(showFrequentItems,200)">장보기 추가 →</span></div><div class="card">${topFrequent.map(([n,cnt],i)=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;${i<topFrequent.length-1?'border-bottom:1px solid var(--border)':''}"><span style="font-size:16px;font-weight:700;color:var(--primary);width:20px">${i+1}</span><span style="flex:1;font-size:15px">${_esc(n)}</span><span style="font-size:14px;color:var(--sub)">${cnt}회</span></div>`).join('')}</div>` : ''}
     ${all.length===0 ? `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">아직 데이터가 없어요</div><div class="empty-sub">재고를 추가하면 통계가 나타납니다</div></div>` : ''}
     <div style="height:30px"></div>
   </div>`;
 }
 
-/* ========== SETTINGS ========== */
+function renderNotice() {
+  localStorage.setItem('lastNoticeRead', APP_VERSION);
+  const c = document.getElementById('content');
+  const versions = Object.keys(UPDATE_LOGS).sort((a, b) => _compareVersion(b, a));
+  const logsHtml = versions.map(v => {
+    const log = UPDATE_LOGS[v];
+    const itemsHtml = (log.items || []).map(it => `<li>${_esc(it)}</li>`).join('');
+    return `<div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-weight:700;color:var(--primary);font-size:15px">v${_esc(v)}</span>
+        <span style="font-size:12px;color:var(--sub)">${_esc(log.date||'')}</span>
+      </div>
+      <ul style="margin:0;padding-left:20px;font-size:13px;line-height:1.7;color:var(--text)">${itemsHtml}</ul>
+    </div>`;
+  }).join('');
+  c.innerHTML = `<div class="view">
+    <div class="sec-header" style="cursor:pointer" onclick="toggleGuide()">
+      <span class="sec-title">📖 사용 가이드</span>
+      <span id="guide-arrow" style="font-size:12px;color:var(--sub);font-weight:700">▼</span>
+    </div>
+    <div id="guide-body" style="display:none">
+      <div class="card" style="margin-bottom:10px">
+        <div style="font-size:15px;font-weight:700;margin-bottom:6px;color:var(--primary)">👋 살림통에 오신 걸 환영해요</div>
+        <div style="font-size:13px;line-height:1.7;color:var(--sub)">냉장고 안 재료를 쉽게 정리하고, 장 볼 것을 잊지 않도록 도와드려요.</div>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px">🥬 냉장고</div>
+        <div style="font-size:13px;line-height:1.7;color:var(--sub)">사 온 재료를 등록하면 유통기한이 가까워질 때 알려드려요.<br>+ 버튼으로 직접 입력하거나, 바코드를 찍어 빠르게 추가할 수 있어요.</div>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px">🛒 장보기 목록</div>
+        <div style="font-size:13px;line-height:1.7;color:var(--sub)">사야 할 것을 메모해두면 마트에서 잊지 않아요.<br>자주 사는 물건은 즐겨찾기로 등록해두면 한 번에 추가할 수 있어요.</div>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px">📷 바코드 스캔</div>
+        <div style="font-size:13px;line-height:1.7;color:var(--sub)">재료 추가 화면에서 바코드를 찍으면 상품 이름이 자동으로 입력돼요.<br>조회되지 않는 상품은 직접 입력하면 됩니다.</div>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px">✅ 다 썼어요</div>
+        <div style="font-size:13px;line-height:1.7;color:var(--sub)">재료를 다 사용하면 "소비" 버튼으로 정리해주세요.<br>바로 장보기 목록에 추가할 수도 있어 편리해요.</div>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px">💾 백업</div>
+        <div style="font-size:13px;line-height:1.7;color:var(--sub)">설정 화면의 "전체 백업"으로 모든 데이터를 파일로 저장할 수 있어요.<br>폰을 바꾸거나 앱을 다시 설치할 때 "백업 복구"로 다시 불러오세요.</div>
+      </div>
+      <div class="card" style="margin-bottom:10px;background:var(--primary-light);border:1.5px solid var(--primary)">
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px;color:var(--primary)">💡 작은 팁</div>
+        <div style="font-size:13px;line-height:1.7;color:var(--text)">• 카테고리(냉장/냉동 등)를 잘 분류해두면 찾기 쉬워요.<br>• 자주 사는 물건은 미리 즐겨찾기에 넣어두세요.<br>• 설정에서 글씨 크기와 테마 색상을 바꿀 수 있어요.</div>
+      </div>
+    </div>
+    <div class="sec-header"><span class="sec-title">📢 업데이트 내역</span></div>
+    ${logsHtml}
+    <div class="sec-header"><span class="sec-title">💌 안내</span></div>
+    <div class="card" style="font-size:13px;color:var(--sub);line-height:1.6">살림통을 사용해주셔서 감사합니다. 의견이나 버그 제보는 Play Store 리뷰로 남겨주세요.</div>
+    <div style="height:30px"></div>
+  </div>`;
+}
+
+function toggleGuide() {
+  const body = document.getElementById('guide-body');
+  const arrow = document.getElementById('guide-arrow');
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
+}
+
 function renderSettings() {
   const s = getSettings();
   const favs = getFavs();
   const c = document.getElementById('content');
   c.innerHTML = `<div class="view">
     <div style="padding:16px 16px 8px"><div class="card" style="text-align:center;margin:0"><div style="font-size:32px;margin-bottom:6px">🥦</div><div style="font-size:15px;font-weight:700;color:var(--primary)">살림통</div><div style="font-size:12px;color:var(--sub)">v${APP_VERSION}</div><div style="margin-top:10px"><button class="btn btn-s btn-sm" onclick="triggerInstall()" style="font-size:13px">📲 앱 설치하기</button></div></div></div>
+    <div class="sec-header"><span class="sec-title">📱 화면 모드</span></div>
+    <div style="padding:0 16px 14px">
+      <div class="fs-btns">
+        <div class="fs-btn ${(s.themeMode||'light')==='light'?'active':''}" onclick="setThemeMode('light')" style="font-size:14px">☀️<div style="font-size:11px;margin-top:3px;font-family:'Noto Sans KR',sans-serif">라이트</div></div>
+        <div class="fs-btn ${s.themeMode==='dark'?'active':''}" onclick="setThemeMode('dark')" style="font-size:14px">🌙<div style="font-size:11px;margin-top:3px;font-family:'Noto Sans KR',sans-serif">다크</div></div>
+        <div class="fs-btn ${s.themeMode==='auto'?'active':''}" onclick="setThemeMode('auto')" style="font-size:14px">🌓<div style="font-size:11px;margin-top:3px;font-family:'Noto Sans KR',sans-serif">자동</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--sub);margin-top:8px;text-align:center">자동: 저녁 6시 ~ 아침 6시 다크</div>
+    </div>
     <div class="sec-header"><span class="sec-title">테마 색상</span></div>
     <div style="padding:0 16px 14px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center">
       ${THEMES.map(t=>`<div onclick="setTheme('${t.id}')" style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:10px 12px;border-radius:14px;border:2px solid ${s.theme===t.id?'var(--primary)':'var(--border)'};background:${s.theme===t.id?'var(--primary-light)':'var(--card)'};min-width:64px;transition:all .15s">
@@ -1095,18 +1303,18 @@ function renderSettings() {
     <div style="padding:0 16px 14px">
       <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px">
         ${BASE_CATS.map(ct=>`<div style="padding:6px 13px;border-radius:20px;background:var(--border);font-size:13px;font-weight:600;color:var(--sub)">${ct}</div>`).join('')}
-        ${getCustomCats().map(ct=>`<div style="display:flex;align-items:center;gap:4px;padding:6px 10px 6px 13px;border-radius:20px;background:var(--primary-light);border:1.5px solid var(--p5);font-size:13px;font-weight:600;color:var(--primary)">${ct}<span onclick="delCustomCat('${escQ(ct)}')" style="cursor:pointer;font-size:15px;color:var(--primary);padding-left:2px">✕</span></div>`).join('')}
+        ${getCustomCats().map(ct=>`<div style="display:flex;align-items:center;gap:4px;padding:6px 10px 6px 13px;border-radius:20px;background:var(--primary-light);border:1.5px solid var(--p5);font-size:13px;font-weight:600;color:var(--primary)">${_esc(ct)}<span onclick="delCustomCat('${escQ(ct)}')" style="cursor:pointer;font-size:15px;color:var(--primary);padding-left:2px">✕</span></div>`).join('')}
         <div onclick="promptAddCat()" style="padding:6px 13px;border-radius:20px;background:var(--card);border:1.5px dashed var(--primary);font-size:13px;font-weight:700;color:var(--primary);cursor:pointer">+ 추가</div>
       </div>
       <div style="font-size:12px;color:var(--sub)">기본(회색) 삭제 불가 · 추가한 것(초록) ✕로 삭제</div>
     </div>
     <div class="sec-header"><span class="sec-title">즐겨찾기 관리 (${favs.length}개)</span></div>
-    ${favs.length>0 ? `<div style="padding:0 16px 10px">${favs.map(f=>`<div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><span class="cat-badge ${catClass(f.category)}" style="margin-right:10px">${f.category}</span><span style="flex:1;font-size:15px">${f.name}</span><span style="cursor:pointer;color:var(--red);font-size:18px;padding:0 4px" onclick="delFav('${escQ(f.name)}')">✕</span></div>`).join('')}</div>` :
+    ${favs.length>0 ? `<div style="padding:0 16px 10px">${favs.map(f=>`<div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><span class="cat-badge ${catClass(f.category)}" style="margin-right:10px">${_esc(f.category)}</span><span style="flex:1;font-size:15px">${_esc(f.name)}</span><span style="cursor:pointer;color:var(--red);font-size:18px;padding:0 4px" onclick="delFav('${escQ(f.name)}')">✕</span></div>`).join('')}</div>` :
     `<div style="padding:0 16px 14px;color:var(--sub);font-size:14px">재고 추가 시 즐겨찾기 등록하면 나타납니다.</div>`}
     <div class="sec-header"><span class="sec-title">💳 카드 설정</span></div>
     <div class="fg" style="padding:0 16px 4px">
       <div class="form-row">
-        <div><label class="fl">카드명 (선택)</label><input class="fi" id="card-name" placeholder="예: 신한카드" value="${s.cardName||''}"></div>
+        <div><label class="fl">카드명 (선택)</label><input class="fi" id="card-name" placeholder="예: 신한카드" value="${escA(s.cardName||'')}"></div>
         <div><label class="fl">결제일</label><input class="fi" id="card-payday" type="number" min="1" max="31" placeholder="15" value="${s.cardPayDay||15}"></div>
       </div>
     </div>
@@ -1122,7 +1330,7 @@ function renderSettings() {
     <div style="padding:0 16px 14px"><button class="btn btn-s btn-sm" onclick="saveCardSettings()">저장</button></div>
     <div class="sec-header"><span class="sec-title">알림</span></div>    <div class="set-list"><div class="set-item" onclick="navigate('noti-settings',{})"><div class="set-icon">🔔</div><div class="set-info"><div class="set-title">알림 시간 설정</div><div class="set-sub">현재: ${s.notificationEnabled?s.notificationTime:'꺼짐'}</div></div><span class="set-arrow">›</span></div></div>
     <div class="sec-header"><span class="sec-title">바코드 API 설정</span></div>
-    <div class="fg" style="margin-top:4px"><label class="fl">바코드 API 키 (선택)</label><input class="fi" id="api-key" type="password" placeholder="API 키 입력..." value="${s.apiKey}"><div style="margin-top:8px"><button class="btn btn-s" onclick="saveApiKey()" style="padding:10px">저장</button></div><div style="font-size:12px;color:var(--sub);margin-top:10px;line-height:1.8">📌 <b>바코드 조회 방식</b><br><span style="color:var(--primary)">✅ Open Food Facts 기반으로 키 없이 무료 사용 가능</span><br>조회 안 되는 상품은 직접 입력<br><span style="color:var(--sub)">다른 API 연동 시 이 칸에 키를 입력하세요</span></div></div>
+    <div class="fg" style="margin-top:4px"><label class="fl">바코드 API 키 (선택)</label><input class="fi" id="api-key" type="password" placeholder="API 키 입력..." value="${escA(s.apiKey||'')}"><div style="margin-top:8px"><button class="btn btn-s" onclick="saveApiKey()" style="padding:10px">저장</button></div><div style="font-size:12px;color:var(--sub);margin-top:10px;line-height:1.8">📌 <b>바코드 조회 방식</b><br><span style="color:var(--primary)">✅ Open Food Facts 기반으로 키 없이 무료 사용 가능</span><br>조회 안 되는 상품은 직접 입력<br><span style="color:var(--sub)">다른 API 연동 시 이 칸에 키를 입력하세요</span></div></div>
     <div class="sec-header"><span class="sec-title">데이터</span></div>
     <div class="set-list">
       <div class="set-item" onclick="exportData()"><div class="set-icon">📤</div><div class="set-info"><div class="set-title">전체 백업</div><div class="set-sub">설정·재고·장보기 JSON으로 저장</div></div><span class="set-arrow">›</span></div>
@@ -1133,7 +1341,6 @@ function renderSettings() {
 }
 function saveApiKey() { const s=getSettings(); s.apiKey=document.getElementById('api-key').value.trim(); saveSettings(s); showToast('API 키 저장됨'); }
 
-/* ── 날짜 휠 피커 ── */
 let _wheelCb = null;
 function openDateWheel(currentVal, cb) {
   _wheelCb = cb;
@@ -1149,7 +1356,7 @@ function openDateWheel(currentVal, cb) {
   ov.className = 'date-wheel-overlay';
   ov.innerHTML = `<div class="date-wheel-box" onclick="event.stopPropagation()">
     <div class="date-wheel-header">
-      <button onclick="document.getElementById('dwo').remove()" style="background:none;border:none;font-size:15px;font-weight:600;color:var(--sub);cursor:pointer;font-family:inherit">취소</button>
+      <button onclick="_closeOverlay('dwo')" style="background:none;border:none;font-size:15px;font-weight:600;color:var(--sub);cursor:pointer;font-family:inherit">취소</button>
       <div style="font-size:16px;font-weight:700">날짜 선택</div>
       <button onclick="confirmDateWheel()" style="background:none;border:none;font-size:15px;font-weight:700;color:var(--primary);cursor:pointer;font-family:inherit">확인</button>
     </div>
@@ -1163,10 +1370,10 @@ function openDateWheel(currentVal, cb) {
     <div style="padding:16px"></div>
   </div>`;
   ov.id = 'dwo';
-  ov.onclick = () => ov.remove();
+  ov.onclick = () => _closeOverlay('dwo');
   document.body.appendChild(ov);
+  _openOverlay('dwo');
 
-  // 스크롤 초기 위치
   window._dwY = selY; window._dwM = selM; window._dwD = selD;
   ['dwY','dwM','dwD'].forEach(id => {
     const col = document.getElementById(id);
@@ -1203,7 +1410,7 @@ function confirmDateWheel() {
   const m = String(window._dwM||1).padStart(2,'0');
   const d = String(window._dwD||1).padStart(2,'0');
   const val = `${y}-${m}-${d}`;
-  document.getElementById('dwo')?.remove();
+  _closeOverlay('dwo');
   if (_wheelCb) _wheelCb(val);
 }
 function triggerInstall() {
@@ -1223,16 +1430,17 @@ function promptAddCat() {
   const overlay = document.createElement('div');
   overlay.id = 'cat-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center';
-  overlay.innerHTML = `<div style="background:#fff;border-radius:20px;padding:24px 20px;margin:0 24px;width:100%;max-width:320px" onclick="event.stopPropagation()">
+  overlay.innerHTML = `<div style="background:var(--card);color:var(--text);border-radius:20px;padding:24px 20px;margin:0 24px;width:100%;max-width:320px" onclick="event.stopPropagation()">
     <div style="font-size:17px;font-weight:700;margin-bottom:14px">카테고리 추가</div>
     <input id="new-cat-input" class="fi" placeholder="예: 반찬, 간식, 음료" style="margin-bottom:14px" onkeydown="if(event.key==='Enter')confirmAddCat()">
     <div style="display:flex;gap:10px">
-      <button onclick="document.getElementById('cat-overlay').remove()" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">취소</button>
+      <button onclick="_closeOverlay('cat-overlay')" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">취소</button>
       <button onclick="confirmAddCat()" style="flex:1;padding:12px;border-radius:12px;border:none;background:var(--primary);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">추가</button>
     </div>
   </div>`;
-  overlay.onclick = () => overlay.remove();
+  overlay.onclick = () => _closeOverlay('cat-overlay');
   document.body.appendChild(overlay);
+  _openOverlay('cat-overlay');
   setTimeout(()=>document.getElementById('new-cat-input')?.focus(), 100);
 }
 
@@ -1242,7 +1450,7 @@ function confirmAddCat() {
   if (!name) { showToast('이름을 입력해주세요'); return; }
   if (getAllCats().includes(name)) { showToast('이미 있는 카테고리예요'); return; }
   addCustomCat(name);
-  document.getElementById('cat-overlay')?.remove();
+  _closeOverlay('cat-overlay');
   showToast(`"${name}" 추가됨`);
   renderStock();
 }
@@ -1285,21 +1493,21 @@ function importData() {
     const text = await file.text();
     let data;
     try { data = JSON.parse(text); } catch { showToast('파일 형식이 올바르지 않아요'); return; }
-    // 확인 다이얼로그
     const overlay = document.createElement('div');
     overlay.id = 'import-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center';
-    overlay.innerHTML = `<div style="background:#fff;border-radius:20px;padding:24px 20px;margin:0 24px;width:100%;max-width:320px" onclick="event.stopPropagation()">
+    overlay.innerHTML = `<div style="background:var(--card);color:var(--text);border-radius:20px;padding:24px 20px;margin:0 24px;width:100%;max-width:320px" onclick="event.stopPropagation()">
       <div style="font-size:22px;text-align:center;margin-bottom:8px">📥</div>
       <div style="font-size:17px;font-weight:700;margin-bottom:6px;text-align:center">백업 복구</div>
       <div style="font-size:13px;color:var(--sub);margin-bottom:18px;text-align:center;line-height:1.6">백업일: ${data.exportDate||'알 수 없음'}<br>재고 ${(data.items||[]).length}개 · 장보기 ${(data.shopping||[]).length}개<br><span style="color:var(--red);font-weight:600">현재 데이터가 모두 교체됩니다</span></div>
       <div style="display:flex;gap:10px">
-        <button onclick="document.getElementById('import-overlay').remove()" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">취소</button>
+        <button onclick="_closeOverlay('import-overlay')" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">취소</button>
         <button onclick="confirmImport()" style="flex:1;padding:12px;border-radius:12px;border:none;background:var(--primary);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">복구</button>
       </div>
     </div>`;
-    overlay.onclick = () => overlay.remove();
+    overlay.onclick = () => _closeOverlay('import-overlay');
     document.body.appendChild(overlay);
+    _openOverlay('import-overlay');
     window._importData = data;
   };
   input.click();
@@ -1307,12 +1515,10 @@ function importData() {
 
 async function confirmImport() {
   const data = window._importData; if (!data) return;
-  document.getElementById('import-overlay')?.remove();
-  // 설정 복구
+  _closeOverlay('import-overlay');
   if (data.settings) localStorage.setItem('salimCfg', JSON.stringify(data.settings));
   if (data.favs) localStorage.setItem('salimFavs', JSON.stringify(data.favs));
   if (data.cats) localStorage.setItem('salimCats', JSON.stringify(data.cats));
-  // DB 복구
   const tx = db.transaction(['items','shopping'],'readwrite');
   tx.objectStore('items').clear();
   tx.objectStore('shopping').clear();
@@ -1322,10 +1528,10 @@ async function confirmImport() {
   showToast('복구 완료!');
   applyFontSize(getSettings().fontSize);
   applyTheme(getSettings().theme);
+  applyThemeMode();
   switchTab('home');
 }
 
-/* ========== NOTI SETTINGS ========== */
 function renderNotiSettings() {
   const s = getSettings();
   const c = document.getElementById('content');
@@ -1351,7 +1557,6 @@ async function testNoti() {
   else showToast('알림 권한이 없습니다');
 }
 
-/* ========== NOTIFICATIONS ========== */
 async function checkNotifications() {
   const s = getSettings();
   if (!s.notificationEnabled) return;
@@ -1375,11 +1580,10 @@ async function checkNotifications() {
   }
 }
 
-/* ========== UTILS ========== */
 function escA(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function escQ(s) { return String(s).replace(/'/g,"\\'").replace(/"/g,'\\"'); }
+function _esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
-/* 결제 수단 토글 HTML */
 function payMethodHtml() {
   const s = getSettings();
   const isCard = s.lastPayMethod !== 'cash';
@@ -1397,7 +1601,6 @@ function setPayMethod(m) {
   if (cash) { cash.style.border = `2px solid ${!isCard?'var(--orange)':'var(--border)'}`;cash.style.background=!isCard?'#fff4e6':'var(--card)';cash.style.color=!isCard?'var(--orange)':'var(--sub)'; }
 }
 
-/* 카드 정산 기간 계산 */
 function getCardPeriod() {
   const s = getSettings();
   const today = new Date();
@@ -1443,20 +1646,61 @@ function applyTheme(id) {
   THEMES.forEach(t => document.body.classList.remove('theme-'+t.id));
   if (id !== 'mint') document.body.classList.add('theme-'+id);
 }
+function setThemeMode(mode) {
+  const s=getSettings(); s.themeMode=mode; saveSettings(s);
+  applyThemeMode(); renderSettings();
+}
+function applyThemeMode() {
+  const mode = (getSettings().themeMode) || 'light';
+  let isDark;
+  if (mode === 'dark') isDark = true;
+  else if (mode === 'light') isDark = false;
+  else {
+    const h = new Date().getHours();
+    isDark = (h >= 18 || h < 6);
+  }
+  document.body.classList.toggle('dark', isDark);
+  _updateThemeColor(isDark);
+}
 
-/* ========== INIT ========== */
+function _updateThemeColor(isDark) {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) return;
+  meta.setAttribute('content', isDark ? '#121418' : '#1aab97');
+}
+
 const TAB_ORDER = ['home','stock','shopping','stats','settings'];
+const OVERLAY_IDS = ['exit-overlay','consumed-overlay','delete-overlay','picker-overlay','dwo','cat-overlay','import-overlay','update-overlay'];
+let _skipPop = false;
+function _openOverlay(id) { history.pushState({overlay:id}, '', '#'); }
+function _closeOverlay(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.remove();
+  _skipPop = true;
+  history.back();
+}
 const safePush = () => { try { if (window.history && window.location.href !== 'about:srcdoc') history.pushState(null,'','#'); } catch(e){} };
 window.addEventListener('DOMContentLoaded', async () => {
   await initDB();
   applyFontSize(getSettings().fontSize);
   applyTheme(getSettings().theme);
+  applyThemeMode();
+  setInterval(() => { if (getSettings().themeMode === 'auto') applyThemeMode(); }, 60000);
   switchTab('home');
   safePush();
-  window.addEventListener('popstate',()=>{ goBack(); safePush(); });
+  window.addEventListener('popstate', () => {
+    if (_skipPop) { _skipPop = false; return; }
+    for (const id of OVERLAY_IDS) {
+      const el = document.getElementById(id);
+      if (el) { el.remove(); safePush(); return; }
+    }
+    goBack();
+    safePush();
+  });
   setTimeout(checkNotifications, 2500);
+  setTimeout(showUpdateOverlay, 300);
 
-  // ── 핀치 줌 완전 차단 ──
   document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
   document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
   document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
@@ -1469,13 +1713,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   content.addEventListener('touchend', e => {
     const dx = e.changedTouches[0].clientX - _tx;
     const dy = e.changedTouches[0].clientY - _ty;
-    // 수평 스와이프만 (수직 스크롤 무시), 최소 60px 이상
     if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
-    // 자식 뷰(상세/추가 화면)에서는 스와이프 탭 전환 안 함
     if (stacks[curTab].length > 1) return;
     const idx = TAB_ORDER.indexOf(curTab);
-    if (dx < 0 && idx < TAB_ORDER.length - 1) switchTab(TAB_ORDER[idx + 1]); // 왼쪽 → 다음 탭
-    if (dx > 0 && idx > 0) switchTab(TAB_ORDER[idx - 1]); // 오른쪽 → 이전 탭
+    if (dx < 0 && idx < TAB_ORDER.length - 1) switchTab(TAB_ORDER[idx + 1]);
+    if (dx > 0 && idx > 0) switchTab(TAB_ORDER[idx - 1]);
   }, { passive: true });
 });
 </script>
