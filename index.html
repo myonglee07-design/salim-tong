@@ -20,7 +20,7 @@ window.addEventListener('beforeinstallprompt', e => {
 });
 if ('serviceWorker' in navigator) {
   const swCode = `
-const CACHE = 'salimtong-v1.7.12';
+const CACHE = 'salimtong-v1.7.17';
 self.addEventListener('install', e => {
   self.skipWaiting();
 });
@@ -224,6 +224,9 @@ textarea.fi{resize:none}
 .prog-fill{background:var(--primary);height:100%;border-radius:4px;transition:width .4s ease}
 
 #toast{position:fixed;bottom:calc(86px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(16px);background:#2d3436;color:#fff;padding:9px 20px;border-radius:20px;font-size:14px;font-weight:500;opacity:0;pointer-events:none;transition:all .25s;z-index:1000;white-space:nowrap;max-width:90vw;text-align:center}
+#update-banner{position:fixed;top:0;left:0;right:0;max-width:480px;margin:0 auto;z-index:400;background:linear-gradient(90deg,var(--primary),var(--primary-dark));color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.15);animation:bannerSlideDown .3s ease}
+@keyframes bannerSlideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+@media (prefers-reduced-motion: reduce){#update-banner{animation:none}}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 .greet{padding:18px 20px 6px}
@@ -258,9 +261,48 @@ textarea.fi{resize:none}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = '1.7.12';
+const APP_VERSION = '1.7.17';
 
 const UPDATE_LOGS = {
+  '1.7.17': {
+    date: '2026.04.24',
+    items: [
+      '드래그 정렬 UX 개선',
+      '드래그 시 다른 아이템이 자연스럽게 자리를 비켜줍니다',
+      '목록 끝 근처에서 자동 스크롤 지원'
+    ]
+  },
+  '1.7.16': {
+    date: '2026.04.24',
+    items: [
+      '재고 수동 정렬 드래그 기능 추가',
+      '설정에서 수동 정렬 선택 후 재고 목록 아이템을 길게 누르면 이동 가능',
+      '원하는 순서로 자유롭게 재배치할 수 있습니다'
+    ]
+  },
+  '1.7.15': {
+    date: '2026.04.24',
+    items: [
+      '재고 정렬 방식 4가지 지원',
+      '유통기한순 / 이름순 / 최근 등록순 / 수동 정렬 선택 가능',
+      '수동 정렬은 다음 업데이트에서 드래그 기능 추가 예정'
+    ]
+  },
+  '1.7.14': {
+    date: '2026.04.24',
+    items: [
+      '새 버전 자동 감지 기능 추가',
+      '앱 업데이트가 배포되면 상단에 알림이 표시됩니다',
+      '알림을 탭하면 즉시 최신 버전으로 새로고침됩니다'
+    ]
+  },
+  '1.7.13': {
+    date: '2026.04.24',
+    items: [
+      '날짜 수정 시 월이 다른 달로 튀는 문제 해결',
+      '재고 수정에서 날짜 휠 정확도 개선'
+    ]
+  },
   '1.7.12': {
     date: '2026.04.24',
     items: [
@@ -372,6 +414,33 @@ function _hasUnreadNotice() {
   return _compareVersion(APP_VERSION, lastRead) > 0;
 }
 
+async function checkForUpdate() {
+  if (typeof Android !== 'undefined' || window.Capacitor?.isNativePlatform?.() === true) return;
+  try {
+    const r = await fetch('./index.html?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return;
+    const html = await r.text();
+    const m = html.match(/const\s+APP_VERSION\s*=\s*['"]([\d.]+)['"]/);
+    if (m && _compareVersion(m[1], APP_VERSION) > 0) {
+      showUpdateBanner(m[1]);
+    }
+  } catch (e) {}
+}
+
+function showUpdateBanner(newVer) {
+  if (document.getElementById('update-banner')) return;
+  if (localStorage.getItem('updateBannerDismissed') === newVer) return;
+  const banner = document.createElement('div');
+  banner.id = 'update-banner';
+  banner.innerHTML = `<div style="flex:1;font-size:13px;font-weight:600">🎉 새 버전 v${_esc(newVer)} 사용 가능</div><button onclick="window.location.reload()" style="background:#fff;color:var(--primary);border:none;padding:6px 12px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit">새로고침</button><button onclick="dismissUpdateBanner('${escQ(newVer)}')" style="background:transparent;color:#fff;border:none;font-size:18px;padding:0 4px;cursor:pointer;line-height:1;font-family:inherit">✕</button>`;
+  document.body.appendChild(banner);
+}
+
+function dismissUpdateBanner(ver) {
+  localStorage.setItem('updateBannerDismissed', ver);
+  document.getElementById('update-banner')?.remove();
+}
+
 let db;
 function initDB() {
   return new Promise((res, rej) => {
@@ -396,7 +465,31 @@ const dbAdd = (s, d) => new Promise((res, rej) => { const r = db.transaction(s,'
 const dbPut = (s, d) => new Promise((res, rej) => { const r = db.transaction(s,'readwrite').objectStore(s).put(d); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
 const dbDel = (s, id) => new Promise((res, rej) => { const r = db.transaction(s,'readwrite').objectStore(s).delete(id); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error); });
 
-const getSettings = () => { try { return { notificationEnabled:true, notificationTime:'09:00', apiKey:'', lastNotiDate:'', fontSize:'md', cardName:'', cardPayDay:15, cardStartDay:2, lastPayMethod:'card', theme:'mint', themeMode:'light', ...JSON.parse(localStorage.getItem('salimCfg')||'{}') }; } catch { return { notificationEnabled:true, notificationTime:'09:00', apiKey:'', lastNotiDate:'', fontSize:'md', cardName:'', cardPayDay:15, cardStartDay:2, lastPayMethod:'card', theme:'mint', themeMode:'light' }; } };
+async function migrateItemOrder() {
+  const all = await dbAll('items');
+  const missing = all.filter(i => i.order === undefined || i.order === null);
+  if (missing.length === 0) return;
+  const sorted = [...missing].sort((a, b) => {
+    if (!a.expiryDate) return 1;
+    if (!b.expiryDate) return -1;
+    return a.expiryDate.localeCompare(b.expiryDate);
+  });
+  const existing = all.filter(i => typeof i.order === 'number');
+  const maxOrder = existing.length > 0 ? Math.max(...existing.map(i => i.order)) : 0;
+  let nextOrder = maxOrder + 1;
+  for (const item of sorted) {
+    item.order = nextOrder++;
+    await dbPut('items', item);
+  }
+}
+
+async function _nextItemOrder() {
+  const all = await dbAll('items');
+  if (all.length === 0) return 1;
+  return Math.max(...all.map(i => Number(i.order) || 0)) + 1;
+}
+
+const getSettings = () => { try { return { notificationEnabled:true, notificationTime:'09:00', apiKey:'', lastNotiDate:'', fontSize:'md', cardName:'', cardPayDay:15, cardStartDay:2, lastPayMethod:'card', theme:'mint', themeMode:'light', sortMode:'auto-exp', ...JSON.parse(localStorage.getItem('salimCfg')||'{}') }; } catch { return { notificationEnabled:true, notificationTime:'09:00', apiKey:'', lastNotiDate:'', fontSize:'md', cardName:'', cardPayDay:15, cardStartDay:2, lastPayMethod:'card', theme:'mint', themeMode:'light', sortMode:'auto-exp' }; } };
 const saveSettings = s => localStorage.setItem('salimCfg', JSON.stringify(s));
 const getFavs = () => { try { return JSON.parse(localStorage.getItem('salimFavs')||'[]'); } catch { return []; } };
 const saveFavs = f => localStorage.setItem('salimFavs', JSON.stringify(f));
@@ -635,7 +728,15 @@ async function renderStock() {
   } else {
     filtered = stockFilter==='전체' ? active : active.filter(i=>i.category===stockFilter);
   }
-  filtered.sort((a,b)=>{ if(!a.expiryDate) return 1; if(!b.expiryDate) return -1; return a.expiryDate.localeCompare(b.expiryDate); });
+  const sortMode = getSettings().sortMode || 'auto-exp';
+  filtered.sort((a, b) => {
+    if (sortMode === 'auto-name') return (a.name||'').localeCompare(b.name||'', 'ko');
+    if (sortMode === 'auto-recent') return (b.purchaseDate||'').localeCompare(a.purchaseDate||'');
+    if (sortMode === 'manual') return (Number(a.order)||0) - (Number(b.order)||0);
+    if (!a.expiryDate) return 1;
+    if (!b.expiryDate) return -1;
+    return a.expiryDate.localeCompare(b.expiryDate);
+  });
   const c = document.getElementById('content');
   c.innerHTML = `<div class="view">
     <div style="padding:10px 16px 4px"><input class="fi" id="stk-search" placeholder="🔍 검색..." oninput="stockSearch()" style="margin:0"></div>
@@ -645,8 +746,222 @@ async function renderStock() {
     <div style="height:80px"></div>
   </div>`;
   addFab(()=>navigate('stock-add',{}));
+  if (sortMode === 'manual') {
+    document.querySelectorAll('#content .item-card').forEach(card => {
+      card.addEventListener('pointerdown', _onItemPointerDown);
+    });
+  }
 }
 function setStockFilter(f) { stockFilter=f; renderStock(); }
+
+function _onItemPointerDown(e) {
+  if (getSettings().sortMode !== 'manual') return;
+  const card = e.currentTarget;
+  const itemId = Number(card.id.replace('ic-', ''));
+  if (!itemId) return;
+  _dragState = {
+    itemId,
+    el: card,
+    startY: e.clientY,
+    longPressTimer: null,
+    isDragging: false
+  };
+  _dragState.longPressTimer = setTimeout(() => { _startDrag(e); }, 450);
+  document.addEventListener('pointermove', _onItemPointerMove, { passive: false });
+  document.addEventListener('pointerup', _onItemPointerUp);
+  document.addEventListener('pointercancel', _onItemPointerUp);
+}
+
+function _onItemPointerMove(e) {
+  if (!_dragState) return;
+  const dy = e.clientY - _dragState.startY;
+  if (!_dragState.isDragging && Math.abs(dy) > 10) {
+    clearTimeout(_dragState.longPressTimer);
+    _cleanupDrag();
+    return;
+  }
+  if (_dragState.isDragging) {
+    e.preventDefault();
+    _updateDragPosition(e);
+  }
+}
+
+function _onItemPointerUp(e) {
+  if (!_dragState) return;
+  if (_dragState.longPressTimer) clearTimeout(_dragState.longPressTimer);
+  const wasDragging = _dragState.isDragging;
+  if (wasDragging) _finishDrag();
+  _cleanupDrag();
+  if (wasDragging) {
+    const blockClick = (ev) => {
+      ev.stopPropagation();
+      ev.preventDefault();
+      document.removeEventListener('click', blockClick, true);
+    };
+    document.addEventListener('click', blockClick, true);
+    setTimeout(() => { document.removeEventListener('click', blockClick, true); }, 300);
+  }
+}
+
+function _startDrag(e) {
+  if (!_dragState) return;
+  _dragState.isDragging = true;
+  navigator.vibrate?.(40);
+  const card = _dragState.el;
+  const rect = card.getBoundingClientRect();
+  card.style.transition = 'none';
+  card.style.zIndex = '100';
+  card.style.opacity = '0.85';
+  card.style.transform = 'scale(1.03)';
+  card.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
+  card.style.pointerEvents = 'none';
+  const container = card.parentElement;
+  const cards = Array.from(container.querySelectorAll('.item-card'));
+  _dragState.cards = cards;
+  _dragState.cardPositions = cards.map(c => ({
+    el: c,
+    top: c.getBoundingClientRect().top,
+    height: c.offsetHeight
+  }));
+  _dragState.currentIndex = cards.indexOf(card);
+  _dragState.targetIndex = _dragState.currentIndex;
+  _dragState.offsetY = _dragState.startY - rect.top;
+}
+
+function _updateDragPosition(e) {
+  if (!_dragState || !_dragState.isDragging) return;
+  const card = _dragState.el;
+  const dy = e.clientY - _dragState.startY;
+  card.style.transform = `translateY(${dy}px) scale(1.03)`;
+  const fingerY = e.clientY;
+  let newTarget = _dragState.currentIndex;
+  _dragState.cardPositions.forEach((pos, i) => {
+    if (i === _dragState.currentIndex) return;
+    const cardMid = pos.top + pos.height / 2;
+    if (fingerY > cardMid && i > _dragState.currentIndex && newTarget < i) newTarget = i;
+    if (fingerY < cardMid && i < _dragState.currentIndex && newTarget > i) newTarget = i;
+  });
+  if (newTarget !== _dragState.targetIndex) {
+    _dragState.targetIndex = newTarget;
+    _applyCardShifts();
+  }
+  _checkAutoScroll(e);
+}
+
+function _applyCardShifts() {
+  if (!_dragState) return;
+  const { cards, currentIndex, targetIndex, el } = _dragState;
+  const cardHeight = _dragState.cardPositions[0]?.height || 80;
+  const shiftAmount = cardHeight + 8;
+  cards.forEach((c, i) => {
+    if (c === el) return;
+    let shift = 0;
+    if (targetIndex > currentIndex) {
+      if (i > currentIndex && i <= targetIndex) shift = -shiftAmount;
+    } else if (targetIndex < currentIndex) {
+      if (i >= targetIndex && i < currentIndex) shift = shiftAmount;
+    }
+    c.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
+    c.style.transform = shift ? `translateY(${shift}px)` : '';
+  });
+}
+
+function _checkAutoScroll(e) {
+  const threshold = 80;
+  const speed = 8;
+  const scroller = document.getElementById('content');
+  if (!scroller) return;
+  const rect = scroller.getBoundingClientRect();
+  const topDistance = e.clientY - rect.top;
+  const bottomDistance = rect.bottom - e.clientY;
+  if (topDistance < threshold && topDistance > 0) _startAutoScroll(-speed);
+  else if (bottomDistance < threshold && bottomDistance > 0) _startAutoScroll(speed);
+  else _stopAutoScroll();
+}
+
+function _startAutoScroll(speed) {
+  if (_autoScrollTimer) return;
+  const scroller = document.getElementById('content');
+  if (!scroller) return;
+  _autoScrollTimer = setInterval(() => {
+    scroller.scrollTop += speed;
+    if (_dragState && _dragState.cards) {
+      _dragState.cardPositions = _dragState.cards.map(c => ({
+        el: c,
+        top: c.getBoundingClientRect().top,
+        height: c.offsetHeight
+      }));
+    }
+  }, 16);
+}
+
+function _stopAutoScroll() {
+  if (_autoScrollTimer) {
+    clearInterval(_autoScrollTimer);
+    _autoScrollTimer = null;
+  }
+}
+
+function _finishDrag() {
+  if (!_dragState) return;
+  const { itemId, currentIndex, targetIndex, el, cards } = _dragState;
+  el.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s, box-shadow 0.2s';
+  el.style.transform = '';
+  el.style.opacity = '';
+  el.style.boxShadow = '';
+  if (cards) {
+    cards.forEach(c => {
+      if (c === el) return;
+      c.style.transform = '';
+    });
+  }
+  if (currentIndex !== targetIndex) {
+    setTimeout(() => { _reorderItems(itemId, targetIndex); }, 200);
+  }
+}
+
+async function _reorderItems(movedItemId, newIndex) {
+  const all = await dbAll('items');
+  const active = all.filter(i => !i.isConsumed);
+  const sorted = [...active].sort((a, b) => (Number(a.order)||0) - (Number(b.order)||0));
+  const moved = sorted.find(i => i.id === movedItemId);
+  if (!moved) return;
+  const oldIndex = sorted.indexOf(moved);
+  sorted.splice(oldIndex, 1);
+  sorted.splice(newIndex, 0, moved);
+  for (let i = 0; i < sorted.length; i++) {
+    if (sorted[i].order !== i + 1) {
+      sorted[i].order = i + 1;
+      await dbPut('items', sorted[i]);
+    }
+  }
+  renderStock();
+}
+
+function _cleanupDrag() {
+  if (!_dragState) return;
+  const card = _dragState.el;
+  if (card) {
+    card.style.transition = '';
+    card.style.zIndex = '';
+    card.style.opacity = '';
+    card.style.transform = '';
+    card.style.boxShadow = '';
+    card.style.pointerEvents = '';
+  }
+  if (_dragState.cards) {
+    _dragState.cards.forEach(c => {
+      if (c === card) return;
+      c.style.transition = '';
+      c.style.transform = '';
+    });
+  }
+  _stopAutoScroll();
+  document.removeEventListener('pointermove', _onItemPointerMove, { passive: false });
+  document.removeEventListener('pointerup', _onItemPointerUp);
+  document.removeEventListener('pointercancel', _onItemPointerUp);
+  _dragState = null;
+}
 function stockSearch() { const q=(document.getElementById('stk-search')?.value||'').toLowerCase(); document.querySelectorAll('[id^="ic-"]').forEach(el=>{ el.style.display=el.querySelector('.item-name')?.textContent?.toLowerCase().includes(q)?'flex':'none'; }); }
 
 
@@ -718,6 +1033,7 @@ async function saveItem(editId) {
     params['stock-detail'] = {id: editId};
     renderView('stock-detail');
   } else {
+    it.order = await _nextItemOrder();
     await dbAdd('items',it);
     showToast('저장되었습니다');
     goBack();
@@ -1166,13 +1482,15 @@ function decideItem(yes, idx) {
 async function saveAndNext(idx) {
   const name = document.getElementById('f-name').value.trim();
   if (!name) { showToast('품목명을 입력해주세요'); return; }
+  const _newOrder = await _nextItemOrder();
   await dbAdd('items',{
     name, category:document.getElementById('f-cat').value,
     quantity:1, unit:'개', purchaseDate:todayStr(),
     expiryDate:document.getElementById('f-exp').value,
     price:Number(document.getElementById('f-price').value)||0,
     payMethod: getSettings().lastPayMethod,
-    memo:'', isFavorite:false, isConsumed:false, consumedDate:null
+    memo:'', isFavorite:false, isConsumed:false, consumedDate:null,
+    order: _newOrder
   });
   const s = window._sfState;
   navigate('stock-from-shopping', { items:s.items, decisions:s.decisions, phase:'register', idx:idx+1, registered:(s.registered||0)+1 });
@@ -1320,6 +1638,16 @@ function renderSettings() {
       </div>
       <div style="font-size:11px;color:var(--sub);margin-top:8px;text-align:center">자동: 저녁 6시 ~ 아침 6시 다크</div>
     </div>
+    <div class="sec-header"><span class="sec-title">📋 재고 정렬</span></div>
+    <div style="padding:0 16px 14px">
+      <div class="fs-btns" style="flex-wrap:wrap;gap:6px">
+        <div class="fs-btn ${(s.sortMode||'auto-exp')==='auto-exp'?'active':''}" onclick="setSortMode('auto-exp')" style="font-size:13px;flex:1 1 45%;min-width:0">📅<div style="font-size:11px;margin-top:3px;font-family:'Noto Sans KR',sans-serif">유통기한</div></div>
+        <div class="fs-btn ${s.sortMode==='auto-name'?'active':''}" onclick="setSortMode('auto-name')" style="font-size:13px;flex:1 1 45%;min-width:0">🔤<div style="font-size:11px;margin-top:3px;font-family:'Noto Sans KR',sans-serif">이름순</div></div>
+        <div class="fs-btn ${s.sortMode==='auto-recent'?'active':''}" onclick="setSortMode('auto-recent')" style="font-size:13px;flex:1 1 45%;min-width:0">🆕<div style="font-size:11px;margin-top:3px;font-family:'Noto Sans KR',sans-serif">최근 등록</div></div>
+        <div class="fs-btn ${s.sortMode==='manual'?'active':''}" onclick="setSortMode('manual')" style="font-size:13px;flex:1 1 45%;min-width:0">✋<div style="font-size:11px;margin-top:3px;font-family:'Noto Sans KR',sans-serif">수동</div></div>
+      </div>
+      ${s.sortMode==='manual' ? `<div style="margin-top:8px;font-size:11px;color:var(--sub);text-align:center">✋ 재고 목록에서 아이템을 길게 누르면 드래그 이동 가능</div>` : ''}
+    </div>
     <div class="sec-header"><span class="sec-title">테마 색상</span></div>
     <div style="padding:0 16px 14px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center">
       ${THEMES.map(t=>`<div onclick="setTheme('${t.id}')" style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:10px 12px;border-radius:14px;border:2px solid ${s.theme===t.id?'var(--primary)':'var(--border)'};background:${s.theme===t.id?'var(--primary-light)':'var(--card)'};min-width:64px;transition:all .15s">
@@ -1374,6 +1702,9 @@ function renderSettings() {
 function saveApiKey() { const s=getSettings(); s.apiKey=document.getElementById('api-key').value.trim(); saveSettings(s); showToast('API 키 저장됨'); }
 
 let _wheelCb = null;
+let _dwSilent = false;
+let _dragState = null;
+let _autoScrollTimer = null;
 function openDateWheel(currentVal, cb) {
   _wheelCb = cb;
   const now = new Date();
@@ -1408,24 +1739,35 @@ function openDateWheel(currentVal, cb) {
   _openOverlay('dwo');
 
   window._dwY = selY; window._dwM = selM; window._dwD = selD;
+  _dwSilent = true;
   ['dwY','dwM','dwD'].forEach(id => {
     const col = document.getElementById(id);
     const sel = col.querySelector('.sel');
     if (sel) col.scrollTop = sel.offsetTop - 78;
     col.addEventListener('scroll', () => onWheelScroll(id), { passive:true });
   });
+  setTimeout(() => { _dwSilent = false; }, 100);
 }
 function onWheelScroll(id) {
+  if (_dwSilent) return;
   const col = document.getElementById(id);
   if (!col) return;
-  const idx = Math.round(col.scrollTop / 44);
-  col.querySelectorAll('.date-wheel-item').forEach((el,i) => el.classList.toggle('sel', i===idx));
-  const selEl = col.querySelectorAll('.date-wheel-item')[idx];
+  const items = col.querySelectorAll('.date-wheel-item');
+  if (!items.length) return;
+  const colCenter = col.scrollTop + col.clientHeight / 2;
+  let idx = 0, minDist = Infinity;
+  items.forEach((el, i) => {
+    const c = el.offsetTop + el.offsetHeight / 2;
+    const d = Math.abs(c - colCenter);
+    if (d < minDist) { minDist = d; idx = i; }
+  });
+  items.forEach((el, i) => el.classList.toggle('sel', i === idx));
+  const selEl = items[idx];
   if (!selEl) return;
   const v = Number(selEl.dataset.v);
-  if (id==='dwY') { window._dwY=v; refreshDayWheel(); }
-  else if (id==='dwM') { window._dwM=v; refreshDayWheel(); }
-  else if (id==='dwD') { window._dwD=v; }
+  if (id === 'dwY') { window._dwY = v; refreshDayWheel(); }
+  else if (id === 'dwM') { window._dwM = v; refreshDayWheel(); }
+  else if (id === 'dwD') { window._dwD = v; }
 }
 function refreshDayWheel() {
   const y = window._dwY || new Date().getFullYear();
@@ -1434,9 +1776,14 @@ function refreshDayWheel() {
   const total = new Date(y,m,0).getDate();
   const col = document.getElementById('dwD'); if (!col) return;
   const newD = Math.min(curD, total);
+  window._dwD = newD;
   col.innerHTML = Array.from({length:total},(_,i)=>i+1).map(d=>`<div class="date-wheel-item${d===newD?' sel':''}" data-v="${d}">${d}일</div>`).join('');
   const sel = col.querySelector('.sel');
-  if (sel) col.scrollTop = sel.offsetTop - 78;
+  if (sel) {
+    _dwSilent = true;
+    col.scrollTop = sel.offsetTop - 78;
+    setTimeout(() => { _dwSilent = false; }, 100);
+  }
 }
 function confirmDateWheel() {
   const y = window._dwY || new Date().getFullYear();
@@ -1560,6 +1907,7 @@ async function confirmImport() {
   await new Promise(res=>tx.oncomplete=res);
   for (const it of (data.items||[])) await dbAdd('items', {...it, id:undefined});
   for (const it of (data.shopping||[])) await dbAdd('shopping', {...it, id:undefined});
+  await migrateItemOrder();
   showToast('복구 완료!');
   applyFontSize(getSettings().fontSize);
   applyTheme(getSettings().theme);
@@ -1685,6 +2033,10 @@ function setThemeMode(mode) {
   const s=getSettings(); s.themeMode=mode; saveSettings(s);
   applyThemeMode(); renderSettings();
 }
+function setSortMode(mode) {
+  const s=getSettings(); s.sortMode=mode; saveSettings(s);
+  renderSettings();
+}
 function applyThemeMode() {
   const mode = (getSettings().themeMode) || 'light';
   let isDark;
@@ -1718,10 +2070,14 @@ function _closeOverlay(id) {
 const safePush = () => { try { if (window.history && window.location.href !== 'about:srcdoc') history.pushState(null,'','#'); } catch(e){} };
 window.addEventListener('DOMContentLoaded', async () => {
   await initDB();
+  await migrateItemOrder();
   applyFontSize(getSettings().fontSize);
   applyTheme(getSettings().theme);
   applyThemeMode();
   setInterval(() => { if (getSettings().themeMode === 'auto') applyThemeMode(); }, 60000);
+  setTimeout(checkForUpdate, 3000);
+  setInterval(checkForUpdate, 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForUpdate(); });
   switchTab('home');
   safePush();
   window.addEventListener('popstate', () => {
